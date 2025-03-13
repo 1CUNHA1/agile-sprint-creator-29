@@ -32,7 +32,7 @@ const CreateUserDialog = ({
     const newUser: User = {
       id: crypto.randomUUID(),
       name,
-      email,
+      email, // Including the email field to fix the TypeScript error
       avatarUrl,
     };
     onCreateUser(newUser);

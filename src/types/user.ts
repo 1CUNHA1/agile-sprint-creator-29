@@ -20,5 +20,13 @@ export interface Profile {
   updated_at: string;
 }
 
-// Remove Project interface as it's not in the database schema
-// We'll handle project data through sprints and tasks instead
+// Add back the Project interface since it's still being used in ProjectSelector.tsx
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  owner_id: string;
+  code: string;
+  members: string[];
+  created_at?: string;
+}
