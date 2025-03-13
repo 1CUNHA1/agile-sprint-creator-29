@@ -2,6 +2,11 @@
 import { supabase } from './client';
 import { type Task } from '@/types/task';
 
+/**
+ * Fetches all tasks for a user
+ * @param userId - The user's ID
+ * @returns Array of tasks
+ */
 export async function fetchTasks(userId: string) {
   const { data, error } = await supabase
     .from('tasks')
@@ -10,16 +15,51 @@ export async function fetchTasks(userId: string) {
   
   if (error) {
     console.error('Error fetching tasks:', error);
-    return [];
+    if (error.code === '42P01') {
+      // Table doesn't exist yet
+      return [];
+    }
+    throw error;
   }
   
-  return data as Task[];
+  // Map from database schema to our application schema
+  const mappedTasks = data.map(task => ({
+    id: task.id,
+    title: task.title,
+    description: task.description || '',
+    priority: task.priority || 'medium',
+    points: task.estimate || 0,
+    status: task.status as "todo" | "in-progress" | "done",
+    assignees: task.assignee_ids || [],
+    userId: task.user_id,
+    projectId: task.project_id
+  }));
+  
+  return mappedTasks as Task[];
 }
 
+/**
+ * Creates a new task
+ * @param task - The task data with user_id
+ * @returns The created task
+ */
 export async function createTask(task: Omit<Task, 'id'> & { user_id: string }) {
+  // Map from our application schema to database schema
+  const dbTask = {
+    title: task.title,
+    description: task.description,
+    priority: task.priority,
+    estimate: task.points,
+    status: task.status,
+    assignee_ids: task.assignees,
+    user_id: task.user_id,
+    project_id: task.projectId,
+    sprint_id: task.sprintId
+  };
+  
   const { data, error } = await supabase
     .from('tasks')
-    .insert(task)
+    .insert(dbTask)
     .select()
     .single();
   
@@ -28,13 +68,42 @@ export async function createTask(task: Omit<Task, 'id'> & { user_id: string }) {
     throw error;
   }
   
-  return data as Task;
+  // Map back to our application schema
+  return {
+    id: data.id,
+    title: data.title,
+    description: data.description || '',
+    priority: data.priority || 'medium',
+    points: data.estimate || 0,
+    status: data.status as "todo" | "in-progress" | "done",
+    assignees: data.assignee_ids || [],
+    userId: data.user_id,
+    projectId: data.project_id
+  } as Task;
 }
 
+/**
+ * Updates an existing task
+ * @param task - The task data with user_id
+ * @returns boolean indicating success
+ */
 export async function updateTask(task: Task & { user_id: string }) {
+  // Map from our application schema to database schema
+  const dbTask = {
+    title: task.title,
+    description: task.description,
+    priority: task.priority,
+    estimate: task.points,
+    status: task.status,
+    assignee_ids: task.assignees,
+    user_id: task.user_id,
+    project_id: task.projectId,
+    sprint_id: task.sprintId
+  };
+  
   const { error } = await supabase
     .from('tasks')
-    .update(task)
+    .update(dbTask)
     .eq('id', task.id);
   
   if (error) {
@@ -45,6 +114,11 @@ export async function updateTask(task: Task & { user_id: string }) {
   return true;
 }
 
+/**
+ * Deletes a task
+ * @param id - The task ID
+ * @returns boolean indicating success
+ */
 export async function deleteTask(id: string) {
   const { error } = await supabase
     .from('tasks')
@@ -59,7 +133,11 @@ export async function deleteTask(id: string) {
   return true;
 }
 
-// Product Backlog (stored as tasks without a sprint)
+/**
+ * Fetches tasks without a sprint (product backlog)
+ * @param userId - The user's ID
+ * @returns Array of tasks
+ */
 export async function fetchProductBacklog(userId: string) {
   const { data, error } = await supabase
     .from('tasks')
@@ -69,8 +147,25 @@ export async function fetchProductBacklog(userId: string) {
   
   if (error) {
     console.error('Error fetching product backlog:', error);
-    return [];
+    if (error.code === '42P01') {
+      // Table doesn't exist yet
+      return [];
+    }
+    throw error;
   }
   
-  return data as Task[];
+  // Map from database schema to our application schema
+  const mappedTasks = data.map(task => ({
+    id: task.id,
+    title: task.title,
+    description: task.description || '',
+    priority: task.priority || 'medium',
+    points: task.estimate || 0,
+    status: task.status as "todo" | "in-progress" | "done",
+    assignees: task.assignee_ids || [],
+    userId: task.user_id,
+    projectId: task.project_id
+  }));
+  
+  return mappedTasks as Task[];
 }

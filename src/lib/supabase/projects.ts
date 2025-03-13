@@ -14,9 +14,13 @@ export async function fetchProjects(userId: string) {
     .select('*')
     .eq('owner_id', userId);
   
-  if (ownedError && ownedError.code !== '42P01') {
+  if (ownedError) {
     console.error('Error fetching owned projects:', ownedError);
-    return [];
+    if (ownedError.code === '42P01') {
+      // Table doesn't exist yet
+      return [];
+    }
+    throw ownedError;
   }
   
   // Get projects the user is a member of
@@ -25,9 +29,13 @@ export async function fetchProjects(userId: string) {
     .select('*')
     .contains('members', [userId]);
   
-  if (memberError && memberError.code !== '42P01') {
+  if (memberError) {
     console.error('Error fetching member projects:', memberError);
-    return [];
+    if (memberError.code === '42P01') {
+      // Table doesn't exist yet
+      return [];
+    }
+    throw memberError;
   }
   
   // Combine and deduplicate projects
@@ -61,7 +69,7 @@ export async function createProject(project: Omit<Project, 'id'>) {
 
 /**
  * Attempts to create the projects table if it doesn't exist
- * @returns void
+ * @returns boolean indicating success
  */
 export async function ensureProjectsTable() {
   try {

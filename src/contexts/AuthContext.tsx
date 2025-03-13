@@ -1,10 +1,10 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { AuthState, User } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
+import { ensureProjectsTable } from '@/lib/supabase';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
@@ -139,14 +139,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user) {
         try {
           // First, try to create the projects table if it doesn't exist
-          // Fix: Properly handle the RPC call with try/catch instead of .catch()
-          try {
-            await supabase.rpc('create_projects_table_if_not_exists');
-            console.log('Projects table created or already exists');
-          } catch (e) {
-            console.log('RPC not available or failed, this is expected in development:', e);
-            // This is expected to fail in development, we'll handle project creation in the UI
-          }
+          await ensureProjectsTable();
+          console.log('Projects table created or already exists');
           
           // Redirect to projects page
           navigate('/projects');
