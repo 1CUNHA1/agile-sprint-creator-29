@@ -38,21 +38,19 @@ const ProjectSelector = () => {
           
           try {
             // Try to create the table via RPC (this may fail in development)
-            await supabase.rpc('create_projects_table_if_not_exists').catch(e => {
-              console.log('RPC unavailable:', e);
-            });
-            
-            // Try again after creating the table
-            const secondCheck = await supabase.from('projects').select('id').limit(1);
-            
-            if (secondCheck.error && secondCheck.error.code === '42P01') {
-              console.log('Still no projects table, setting empty projects array');
-              setProjects([]);
-              setIsLoading(false);
-              return;
-            }
-          } catch (createError) {
-            console.log('Failed to create projects table:', createError);
+            // Fix: Remove the .catch() method which is causing TypeScript errors
+            await supabase.rpc('create_projects_table_if_not_exists');
+            console.log('RPC call completed');
+          } catch (e) {
+            console.log('RPC unavailable:', e);
+            // This is expected to fail in development, we'll handle project creation in the UI
+          }
+          
+          // Try again after creating the table
+          const secondCheck = await supabase.from('projects').select('id').limit(1);
+          
+          if (secondCheck.error && secondCheck.error.code === '42P01') {
+            console.log('Still no projects table, setting empty projects array');
             setProjects([]);
             setIsLoading(false);
             return;
@@ -127,25 +125,10 @@ const ProjectSelector = () => {
       if (checkError && checkError.code === '42P01') {
         console.log('Projects table does not exist, creating it first');
         
-        // Create the projects table
-        const createTableQuery = `
-          CREATE TABLE IF NOT EXISTS public.projects (
-            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            name TEXT NOT NULL,
-            description TEXT,
-            owner_id UUID NOT NULL REFERENCES auth.users(id),
-            code TEXT NOT NULL,
-            members JSONB DEFAULT '[]'::jsonb,
-            created_at TIMESTAMPTZ DEFAULT NOW()
-          );
-        `;
-        
-        // Execute SQL query to create table (this might fail due to permissions)
+        // Fix: Remove the .catch() method which is causing TypeScript errors
         try {
-          await supabase.rpc('create_projects_table_if_not_exists').catch(e => {
-            console.log('RPC unavailable, handling table creation via UI:', e);
-            // Continue anyway, we'll try to insert and handle any errors
-          });
+          await supabase.rpc('create_projects_table_if_not_exists');
+          console.log('RPC call completed for table creation');
         } catch (tableErr) {
           console.error('Unable to create table via RPC:', tableErr);
           // Continue anyway

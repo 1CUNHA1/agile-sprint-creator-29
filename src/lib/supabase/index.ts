@@ -6,3 +6,4 @@ export { supabase };
 export * from './tasks';
 export * from './sprints';
 export * from './sprint-tasks';
+export * from './projects';

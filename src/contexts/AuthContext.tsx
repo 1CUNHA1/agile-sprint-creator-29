@@ -139,14 +139,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user) {
         try {
           // First, try to create the projects table if it doesn't exist
-          await supabase.rpc('create_projects_table_if_not_exists')
-            .then(() => {
-              console.log('Projects table created or already exists');
-            })
-            .catch((e: Error) => {
-              console.log('RPC not available or failed, this is expected in development:', e);
-              // This is expected to fail in development, we'll handle project creation in the UI
-            });
+          // Fix: Properly handle the RPC call with try/catch instead of .catch()
+          try {
+            await supabase.rpc('create_projects_table_if_not_exists');
+            console.log('Projects table created or already exists');
+          } catch (e) {
+            console.log('RPC not available or failed, this is expected in development:', e);
+            // This is expected to fail in development, we'll handle project creation in the UI
+          }
           
           // Redirect to projects page
           navigate('/projects');
