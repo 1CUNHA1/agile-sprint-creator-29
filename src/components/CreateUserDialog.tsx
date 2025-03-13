@@ -1,3 +1,4 @@
+
 // src/components/CreateUserDialog.tsx
 import { useState } from "react";
 import {
@@ -23,6 +24,7 @@ const CreateUserDialog = ({
   onCreateUser,
 }: CreateUserDialogProps) => {
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -30,10 +32,12 @@ const CreateUserDialog = ({
     const newUser: User = {
       id: crypto.randomUUID(),
       name,
+      email,
       avatarUrl,
     };
     onCreateUser(newUser);
     setName("");
+    setEmail("");
     setAvatarUrl("");
   };
 
@@ -51,6 +55,17 @@ const CreateUserDialog = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter user name"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter email address"
               required
             />
           </div>

@@ -20,12 +20,5 @@ export interface Profile {
   updated_at: string;
 }
 
-export interface Project {
-  id: string;
-  name: string;
-  description: string;
-  code: string;
-  owner_id: string;
-  created_at: string;
-  members: string[]; // Array of user IDs
-}
+// Remove Project interface as it's not in the database schema
+// We'll handle project data through sprints and tasks instead
