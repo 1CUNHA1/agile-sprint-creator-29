@@ -13,8 +13,11 @@ if (!supabaseUrl || !supabaseKey) {
 export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 // Tasks
-export async function fetchTasks() {
-  const { data, error } = await supabase.from('tasks').select('*');
+export async function fetchTasks(userId: string) {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId);
   
   if (error) {
     console.error('Error fetching tasks:', error);
@@ -24,18 +27,22 @@ export async function fetchTasks() {
   return data as Task[];
 }
 
-export async function createTask(task: Task) {
-  const { error } = await supabase.from('tasks').insert(task);
+export async function createTask(task: Omit<Task, 'id'> & { user_id: string }) {
+  const { data, error } = await supabase
+    .from('tasks')
+    .insert(task)
+    .select()
+    .single();
   
   if (error) {
     console.error('Error creating task:', error);
-    return false;
+    throw error;
   }
   
-  return true;
+  return data as Task;
 }
 
-export async function updateTask(task: Task) {
+export async function updateTask(task: Task & { user_id: string }) {
   const { error } = await supabase
     .from('tasks')
     .update(task)
@@ -43,7 +50,7 @@ export async function updateTask(task: Task) {
   
   if (error) {
     console.error('Error updating task:', error);
-    return false;
+    throw error;
   }
   
   return true;
@@ -57,15 +64,18 @@ export async function deleteTask(id: string) {
   
   if (error) {
     console.error('Error deleting task:', error);
-    return false;
+    throw error;
   }
   
   return true;
 }
 
 // Sprints
-export async function fetchSprints() {
-  const { data, error } = await supabase.from('sprints').select('*');
+export async function fetchSprints(userId: string) {
+  const { data, error } = await supabase
+    .from('sprints')
+    .select('*')
+    .eq('user_id', userId);
   
   if (error) {
     console.error('Error fetching sprints:', error);
@@ -75,18 +85,22 @@ export async function fetchSprints() {
   return data as Sprint[];
 }
 
-export async function createSprint(sprint: Sprint) {
-  const { error } = await supabase.from('sprints').insert(sprint);
+export async function createSprint(sprint: Omit<Sprint, 'id'> & { user_id: string }) {
+  const { data, error } = await supabase
+    .from('sprints')
+    .insert(sprint)
+    .select()
+    .single();
   
   if (error) {
     console.error('Error creating sprint:', error);
-    return false;
+    throw error;
   }
   
-  return true;
+  return data as Sprint;
 }
 
-export async function updateSprint(sprint: Sprint) {
+export async function updateSprint(sprint: Sprint & { user_id: string }) {
   const { error } = await supabase
     .from('sprints')
     .update(sprint)
@@ -94,7 +108,21 @@ export async function updateSprint(sprint: Sprint) {
   
   if (error) {
     console.error('Error updating sprint:', error);
-    return false;
+    throw error;
+  }
+  
+  return true;
+}
+
+export async function deleteSprint(id: string) {
+  const { error } = await supabase
+    .from('sprints')
+    .delete()
+    .eq('id', id);
+  
+  if (error) {
+    console.error('Error deleting sprint:', error);
+    throw error;
   }
   
   return true;
@@ -110,7 +138,7 @@ export async function deleteTaskFromSprint(sprintId: string, taskId: string) {
   
   if (error) {
     console.error('Error fetching sprint:', error);
-    return false;
+    throw error;
   }
   
   // Update the sprint's tasks array
@@ -123,7 +151,7 @@ export async function deleteTaskFromSprint(sprintId: string, taskId: string) {
   
   if (updateError) {
     console.error('Error updating sprint tasks:', updateError);
-    return false;
+    throw updateError;
   }
   
   return true;
@@ -139,11 +167,11 @@ export async function addTaskToSprint(sprintId: string, taskId: string) {
   
   if (error) {
     console.error('Error fetching sprint:', error);
-    return false;
+    throw error;
   }
   
   // Update the sprint's tasks array
-  const updatedTasks = [...(data.tasks as string[]), taskId];
+  const updatedTasks = [...(data.tasks as string[] || []), taskId];
   
   const { error: updateError } = await supabase
     .from('sprints')
@@ -152,8 +180,24 @@ export async function addTaskToSprint(sprintId: string, taskId: string) {
   
   if (updateError) {
     console.error('Error updating sprint tasks:', updateError);
-    return false;
+    throw updateError;
   }
   
   return true;
+}
+
+// Product Backlog (stored as tasks without a sprint)
+export async function fetchProductBacklog(userId: string) {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .is('sprint_id', null);
+  
+  if (error) {
+    console.error('Error fetching product backlog:', error);
+    return [];
+  }
+  
+  return data as Task[];
 }

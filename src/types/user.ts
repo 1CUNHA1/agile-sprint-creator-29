@@ -11,3 +11,11 @@ export interface AuthState {
   user: User | null;
   isLoading: boolean;
 }
+
+export interface Profile {
+  id: string;
+  name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
