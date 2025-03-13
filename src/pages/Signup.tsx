@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,16 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signup } = useAuth();
+  const { signup, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Add effect to redirect when auth state changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/projects');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +50,7 @@ const Signup = () => {
     try {
       await signup(email, password, name);
       // Auth state is handled in AuthContext with Supabase listeners
+      // and the useEffect above will handle redirection
     } catch (error) {
       // Error is handled in the signup function
       console.error('Signup error:', error);

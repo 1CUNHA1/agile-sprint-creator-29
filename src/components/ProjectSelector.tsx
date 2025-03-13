@@ -29,13 +29,29 @@ const ProjectSelector = () => {
       
       try {
         setIsLoading(true);
+        
+        // Check if projects table exists
+        const { error: tableError } = await supabase
+          .from('projects')
+          .select('count')
+          .limit(1)
+          .single();
+          
+        if (tableError && tableError.code === '42P01') {
+          // Table doesn't exist yet - this is normal for new users
+          console.log('Projects table does not exist yet, setting empty projects array');
+          setProjects([]);
+          setIsLoading(false);
+          return;
+        }
+        
         // Get projects the user has created
         const { data: ownedProjects, error: ownedError } = await supabase
           .from('projects')
           .select('*')
           .eq('owner_id', user.id);
           
-        if (ownedError) throw ownedError;
+        if (ownedError && ownedError.code !== '42P01') throw ownedError;
         
         // Get projects the user is a member of
         const { data: memberProjects, error: memberError } = await supabase
@@ -43,10 +59,10 @@ const ProjectSelector = () => {
           .select('*')
           .contains('members', [user.id]);
           
-        if (memberError) throw memberError;
+        if (memberError && memberError.code !== '42P01') throw memberError;
         
         // Combine and deduplicate projects
-        const allProjects = [...ownedProjects, ...memberProjects];
+        const allProjects = [...(ownedProjects || []), ...(memberProjects || [])];
         const uniqueProjects = Array.from(
           new Map(allProjects.map((project) => [project.id, project])).values()
         );
@@ -54,12 +70,16 @@ const ProjectSelector = () => {
         setProjects(uniqueProjects as Project[]);
       } catch (error) {
         console.error('Error fetching projects:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load your projects',
-          variant: 'destructive',
-          duration: 5000,
-        });
+        // Don't show an error toast for expected errors
+        if (error instanceof Error && !error.message.includes('42P01')) {
+          toast({
+            title: 'Error',
+            description: 'Failed to load your projects',
+            variant: 'destructive',
+            duration: 5000,
+          });
+        }
+        setProjects([]);
       } finally {
         setIsLoading(false);
       }
@@ -107,7 +127,7 @@ const ProjectSelector = () => {
       });
       
       // Navigate to the project
-      navigate(`/dashboard?project=${data.id}`);
+      navigate(`/project/${data.id}`);
     } catch (error) {
       console.error('Error creating project:', error);
       toast({
@@ -147,7 +167,7 @@ const ProjectSelector = () => {
       
       // Check if user is already a member
       if (data.members && data.members.includes(user.id)) {
-        navigate(`/dashboard?project=${data.id}`);
+        navigate(`/project/${data.id}`);
         return;
       }
       
@@ -168,7 +188,7 @@ const ProjectSelector = () => {
       });
       
       // Navigate to the project
-      navigate(`/dashboard?project=${data.id}`);
+      navigate(`/project/${data.id}`);
     } catch (error) {
       console.error('Error joining project:', error);
       setJoinError("Invalid project code or project not found");
@@ -176,7 +196,7 @@ const ProjectSelector = () => {
   };
 
   const handleSelectProject = (projectId: string) => {
-    navigate(`/dashboard?project=${projectId}`);
+    navigate(`/project/${projectId}`);
   };
 
   if (isLoading) {
@@ -194,7 +214,7 @@ const ProjectSelector = () => {
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6 text-center">Your Projects</h1>
       
-      {projects.length > 0 && (
+      {projects.length > 0 ? (
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Select a Project</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -219,6 +239,13 @@ const ProjectSelector = () => {
               </Card>
             ))}
           </div>
+        </div>
+      ) : (
+        <div className="mb-8 text-center p-8 border border-dashed rounded-lg bg-muted/30">
+          <h2 className="text-xl font-semibold mb-2">Welcome to Sprint Manager!</h2>
+          <p className="text-muted-foreground mb-4">
+            You don't have any projects yet. Create your first project or join an existing one.
+          </p>
         </div>
       )}
       

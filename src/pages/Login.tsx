@@ -18,7 +18,7 @@ const Login = () => {
   // Add effect to redirect when auth state changes
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate('/projects');
     }
   }, [isAuthenticated, navigate]);
 

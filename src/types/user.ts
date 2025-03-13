@@ -20,7 +20,6 @@ export interface Profile {
   updated_at: string;
 }
 
-// Add back the Project interface since it's still being used in ProjectSelector.tsx
 export interface Project {
   id: string;
   name: string;
