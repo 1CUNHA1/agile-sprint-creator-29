@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { Project } from "@/types/user";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { AlertCircle, Plus, Users } from "lucide-react";
+import { AlertCircle, Plus, Users, Home } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const ProjectSelector = () => {
@@ -30,19 +29,34 @@ const ProjectSelector = () => {
       try {
         setIsLoading(true);
         
-        // Check if projects table exists
-        const { error: tableError } = await supabase
-          .from('projects')
-          .select('count')
-          .limit(1)
-          .single();
+        // First, check if projects table exists
+        const { error: checkError } = await supabase.from('projects').select('id').limit(1);
+        
+        // If table doesn't exist, create it
+        if (checkError && checkError.code === '42P01') {
+          console.log('Projects table does not exist, attempting to create it');
           
-        if (tableError && tableError.code === '42P01') {
-          // Table doesn't exist yet - this is normal for new users
-          console.log('Projects table does not exist yet, setting empty projects array');
-          setProjects([]);
-          setIsLoading(false);
-          return;
+          try {
+            // Try to create the table via RPC (this may fail in development)
+            await supabase.rpc('create_projects_table_if_not_exists').catch(e => {
+              console.log('RPC unavailable:', e);
+            });
+            
+            // Try again after creating the table
+            const secondCheck = await supabase.from('projects').select('id').limit(1);
+            
+            if (secondCheck.error && secondCheck.error.code === '42P01') {
+              console.log('Still no projects table, setting empty projects array');
+              setProjects([]);
+              setIsLoading(false);
+              return;
+            }
+          } catch (createError) {
+            console.log('Failed to create projects table:', createError);
+            setProjects([]);
+            setIsLoading(false);
+            return;
+          }
         }
         
         // Get projects the user has created
@@ -70,7 +84,6 @@ const ProjectSelector = () => {
         setProjects(uniqueProjects as Project[]);
       } catch (error) {
         console.error('Error fetching projects:', error);
-        // Don't show an error toast for expected errors
         if (error instanceof Error && !error.message.includes('42P01')) {
           toast({
             title: 'Error',
@@ -104,8 +117,42 @@ const ProjectSelector = () => {
     }
     
     try {
+      // Generate a unique project code
       const projectCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       
+      // First check if the table exists
+      const { error: checkError } = await supabase.from('projects').select('id').limit(1);
+      
+      // If table doesn't exist, create it first
+      if (checkError && checkError.code === '42P01') {
+        console.log('Projects table does not exist, creating it first');
+        
+        // Create the projects table
+        const createTableQuery = `
+          CREATE TABLE IF NOT EXISTS public.projects (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            name TEXT NOT NULL,
+            description TEXT,
+            owner_id UUID NOT NULL REFERENCES auth.users(id),
+            code TEXT NOT NULL,
+            members JSONB DEFAULT '[]'::jsonb,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );
+        `;
+        
+        // Execute SQL query to create table (this might fail due to permissions)
+        try {
+          await supabase.rpc('create_projects_table_if_not_exists').catch(e => {
+            console.log('RPC unavailable, handling table creation via UI:', e);
+            // Continue anyway, we'll try to insert and handle any errors
+          });
+        } catch (tableErr) {
+          console.error('Unable to create table via RPC:', tableErr);
+          // Continue anyway
+        }
+      }
+      
+      // Now try to insert the project
       const { data, error } = await supabase
         .from('projects')
         .insert({
@@ -118,16 +165,28 @@ const ProjectSelector = () => {
         .select()
         .single();
         
-      if (error) throw error;
-      
-      toast({
-        title: 'Success',
-        description: 'Project created successfully',
-        duration: 3000,
-      });
-      
-      // Navigate to the project
-      navigate(`/project/${data.id}`);
+      if (error) {
+        if (error.code === '42P01') {
+          // Table doesn't exist
+          toast({
+            title: 'Database Setup Required',
+            description: 'Please contact your administrator to set up the database schema',
+            variant: 'destructive',
+            duration: 5000,
+          });
+        } else {
+          throw error;
+        }
+      } else if (data) {
+        toast({
+          title: 'Success',
+          description: 'Project created successfully',
+          duration: 3000,
+        });
+        
+        // Navigate to the project
+        navigate(`/project/${data.id}`);
+      }
     } catch (error) {
       console.error('Error creating project:', error);
       toast({
@@ -212,7 +271,13 @@ const ProjectSelector = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6 text-center">Your Projects</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-center">Your Projects</h1>
+        <Button variant="outline" onClick={() => navigate('/')}>
+          <Home className="h-4 w-4 mr-2" />
+          Home
+        </Button>
+      </div>
       
       {projects.length > 0 ? (
         <div className="mb-8">

@@ -98,18 +98,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         title: 'Success',
         description: 'Logged in successfully',
-        // Toast will auto-dismiss after 3 seconds
         duration: 3000,
       });
       
-      navigate('/dashboard');
+      // Redirect to projects page instead of dashboard
+      navigate('/projects');
     } catch (error) {
       console.error('Login failed', error);
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Login failed. Please check your credentials.',
         variant: 'destructive',
-        // Error toast will auto-dismiss after 5 seconds
         duration: 5000,
       });
       throw error;
@@ -138,8 +137,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // If user is successfully created (and email confirmation is not required)
       if (data.user) {
-        // Auto-login the user (they're already authenticated by signUp)
-        navigate('/dashboard');
+        try {
+          // First, try to create the projects table if it doesn't exist
+          await supabase.rpc('create_projects_table_if_not_exists').catch(e => {
+            console.log('RPC not available or failed, this is expected in development:', e);
+            // This is expected to fail in development, we'll handle project creation in the UI
+          });
+          
+          // Redirect to projects page
+          navigate('/projects');
+        } catch (err) {
+          console.error('Error setting up projects:', err);
+          navigate('/projects');
+        }
       } else {
         toast({
           title: 'Verification required',

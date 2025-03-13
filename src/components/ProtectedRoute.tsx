@@ -22,7 +22,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
   
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" state={{ from: location }} />;
   }
   
   // If we're on the dashboard page but there's no project param, redirect to projects
