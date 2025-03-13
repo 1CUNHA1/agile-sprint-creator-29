@@ -1,8 +1,10 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { AuthState, User } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
@@ -19,6 +21,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading: true,
   });
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const getInitialSession = async () => {
@@ -95,13 +98,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         title: 'Success',
         description: 'Logged in successfully',
+        // Toast will auto-dismiss after 3 seconds
+        duration: 3000,
       });
+      
+      navigate('/dashboard');
     } catch (error) {
       console.error('Login failed', error);
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Login failed. Please check your credentials.',
         variant: 'destructive',
+        // Error toast will auto-dismiss after 5 seconds
+        duration: 5000,
       });
       throw error;
     }
@@ -109,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (email: string, password: string, name: string) => {
     try {
-      const { error } = await supabase.auth.signUp({ 
+      const { error, data } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
@@ -124,13 +133,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         title: 'Success',
         description: 'Your account has been created successfully',
+        duration: 3000,
       });
+      
+      // If user is successfully created (and email confirmation is not required)
+      if (data.user) {
+        // Auto-login the user (they're already authenticated by signUp)
+        navigate('/dashboard');
+      } else {
+        toast({
+          title: 'Verification required',
+          description: 'Please check your email to verify your account before logging in',
+          duration: 5000,
+        });
+        navigate('/login');
+      }
     } catch (error) {
       console.error('Signup failed', error);
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Signup failed. Please try again.',
         variant: 'destructive',
+        duration: 5000,
       });
       throw error;
     }
@@ -145,13 +169,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         title: 'Success',
         description: 'You have been logged out successfully',
+        duration: 3000,
       });
+      
+      navigate('/');
     } catch (error) {
       console.error('Logout failed', error);
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Logout failed',
         variant: 'destructive',
+        duration: 5000,
       });
       throw error;
     }

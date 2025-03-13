@@ -7,4 +7,6 @@ export interface Task {
   points: number;
   status: "todo" | "in-progress" | "done";
   assignees: string[]; // Array of user IDs
+  userId?: string; // The ID of the user who created the task
+  projectId?: string; // The ID of the project this task belongs to
 }

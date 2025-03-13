@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { User } from "@/types/user";
 import { Avatar } from "@/components/ui/avatar";
 import { Check } from "lucide-react";
 import { Sprint } from "@/types/sprint";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -17,22 +19,49 @@ interface CreateTaskDialogProps {
   onCreateTask: (task: Task) => void;
   sprints?: Sprint[];
   selectedSprintId?: string;
+  projectId?: string;
 }
 
-const MOCK_USERS: User[] = [
-  { id: "1", name: "John Doe", email: "john.doe@example.com", avatarUrl: "https://github.com/shadcn.png" },
-  { id: "2", name: "Jane Smith", email: "jane.smith@example.com", avatarUrl: "https://github.com/shadcn.png" },
-  { id: "3", name: "Bob Johnson", email: "bob.johnson@example.com", avatarUrl: "https://github.com/shadcn.png" },
-];
-
-const CreateTaskDialog = ({ open, onClose, onCreateTask, sprints, selectedSprintId }: CreateTaskDialogProps) => {
+const CreateTaskDialog = ({ open, onClose, onCreateTask, sprints, selectedSprintId, projectId }: CreateTaskDialogProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("");
+  const [priority, setPriority] = useState("medium");
   const [points, setPoints] = useState("");
-  const [status, setStatus] = useState<"todo" | "in-progress" | "done">("todo");
   const [assignees, setAssignees] = useState<string[]>([]);
   const [sprintId, setSprintId] = useState(selectedSprintId || "");
+  const [projectMembers, setProjectMembers] = useState<User[]>([]);
+  const { user } = useAuth();
+
+  // Fetch project members when the dialog opens and project ID is available
+  useEffect(() => {
+    const fetchProjectMembers = async () => {
+      if (!projectId || !open) return;
+      
+      try {
+        // This is a simplified approach - in a real app, you'd query the members from the projects table
+        // and then get their user details
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*');
+          
+        if (error) throw error;
+        
+        // Convert profiles to User objects
+        const users: User[] = data.map(profile => ({
+          id: profile.id,
+          name: profile.name || 'Unknown User',
+          email: '',  // You might want to fetch this separately due to privacy concerns
+          avatarUrl: profile.avatar_url || undefined,
+        }));
+        
+        setProjectMembers(users);
+      } catch (error) {
+        console.error('Error fetching project members:', error);
+      }
+    };
+    
+    fetchProjectMembers();
+  }, [projectId, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,21 +71,22 @@ const CreateTaskDialog = ({ open, onClose, onCreateTask, sprints, selectedSprint
       description,
       priority: priority || "medium", // Default to medium if not selected
       points: Number(points) || 1, // Default to 1 if not valid
-      status,
+      status: "todo", // All new tasks start as "todo" regardless of where they're created
       assignees,
+      userId: user?.id || "", // Attach the current user ID
+      projectId: projectId || "", // Attach the project ID if available
     };
     onCreateTask(newTask);
+    resetForm();
+  };
+
+  const resetForm = () => {
     setTitle("");
     setDescription("");
     setPriority("medium");
     setPoints("");
-    setStatus("todo");
     setAssignees([]);
     setSprintId(selectedSprintId || "");
-  };
-
-  const handleStatusChange = (value: string) => {
-    setStatus(value as "todo" | "in-progress" | "done");
   };
 
   const toggleAssignee = (userId: string) => {
@@ -101,44 +131,36 @@ const CreateTaskDialog = ({ open, onClose, onCreateTask, sprints, selectedSprint
               placeholder="Enter task description"
             />
           </div>
-          {sprints && sprints.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="sprint">Sprint</Label>
-              <Select value={sprintId} onValueChange={setSprintId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select sprint" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sprints.map((sprint) => (
-                    <SelectItem key={sprint.id} value={sprint.id}>
-                      {sprint.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           <div className="space-y-2">
             <Label>Assignees</Label>
-            <div className="flex flex-wrap gap-2">
-              {MOCK_USERS.map((user) => (
-                <Button
-                  key={user.id}
-                  type="button"
-                  variant={assignees.includes(user.id) ? "default" : "outline"}
-                  className="flex items-center gap-2"
-                  onClick={() => toggleAssignee(user.id)}
-                >
-                  <Avatar className="w-6 h-6">
-                    <img src={user.avatarUrl} alt={user.name} />
-                  </Avatar>
-                  {user.name}
-                  {assignees.includes(user.id) && (
-                    <Check className="w-4 h-4" />
-                  )}
-                </Button>
-              ))}
-            </div>
+            {projectMembers.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {projectMembers.map((member) => (
+                  <Button
+                    key={member.id}
+                    type="button"
+                    variant={assignees.includes(member.id) ? "default" : "outline"}
+                    className="flex items-center gap-2"
+                    onClick={() => toggleAssignee(member.id)}
+                  >
+                    <Avatar className="w-6 h-6">
+                      <img 
+                        src={member.avatarUrl || "https://github.com/shadcn.png"} 
+                        alt={member.name} 
+                      />
+                    </Avatar>
+                    {member.name}
+                    {assignees.includes(member.id) && (
+                      <Check className="w-4 h-4" />
+                    )}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No project members available. Tasks will be unassigned.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="priority">Priority</Label>
@@ -150,19 +172,6 @@ const CreateTaskDialog = ({ open, onClose, onCreateTask, sprints, selectedSprint
                 <SelectItem value="high">High</SelectItem>
                 <SelectItem value="medium">Medium</SelectItem>
                 <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select value={status} onValueChange={handleStatusChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todo">To Do</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="done">Done</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -190,4 +199,3 @@ const CreateTaskDialog = ({ open, onClose, onCreateTask, sprints, selectedSprint
 };
 
 export default CreateTaskDialog;
-

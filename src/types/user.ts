@@ -19,3 +19,13 @@ export interface Profile {
   created_at: string;
   updated_at: string;
 }
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  code: string;
+  owner_id: string;
+  created_at: string;
+  members: string[]; // Array of user IDs
+}

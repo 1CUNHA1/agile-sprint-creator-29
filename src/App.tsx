@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
+import ProjectSelector from "@/components/ProjectSelector";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
@@ -16,16 +17,26 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
           <Routes>
             {/* Landing page as the root path */}
             <Route path="/" element={<LandingPage />} />
             
-            {/* Make dashboard accessible via /dashboard */}
+            {/* Project selection screen */}
+            <Route
+              path="/projects"
+              element={
+                <ProtectedRoute>
+                  <ProjectSelector />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Dashboard for viewing/editing a specific project */}
             <Route
               path="/dashboard"
               element={
@@ -34,14 +45,15 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+        </TooltipProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
