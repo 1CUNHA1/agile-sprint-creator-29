@@ -9,18 +9,18 @@ import { Project } from "@/types/user";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchProjects, createProject, joinProject } from "@/lib/supabase";
-import { AlertCircle, Plus, Users, Home } from "lucide-react";
+import { AlertCircle, Plus, Users, Home, LogOut } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const ProjectSelector = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user, logout } = useAuth();
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
   const { toast } = useToast();
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -65,11 +65,13 @@ const ProjectSelector = () => {
     try {
       // Generate a unique project code
       const projectCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const ts = new Date().toISOString();
       
       const newProject = await createProject({
         name: projectName.trim(),
         description: projectDescription.trim(),
-        owner_id: user.id,
+        created_at: ts,
+        user_id: user.id,
         code: projectCode,
         members: [user.id],
       });
@@ -138,13 +140,6 @@ const ProjectSelector = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-center">Your Projects</h1>
-        <Button variant="outline" onClick={() => navigate('/')}>
-          <Home className="h-4 w-4 mr-2" />
-          Home
-        </Button>
-      </div>
       
       {projects.length > 0 ? (
         <div className="mb-8">

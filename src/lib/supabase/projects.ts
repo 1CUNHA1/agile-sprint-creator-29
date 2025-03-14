@@ -13,7 +13,7 @@ export async function fetchProjects(userId: string) {
     const { data: ownedProjects, error: ownedError } = await supabase
       .from('projects')
       .select('*')
-      .eq('owner_id', userId);
+      .eq('user_id', userId);
     
     if (ownedError) throw ownedError;
     
@@ -43,7 +43,7 @@ export async function fetchProjects(userId: string) {
  * @param project - The project data
  * @returns The created project
  */
-export async function createProject(project: Omit<Project, 'id'>) {
+export async function createProject(project: Omit<Project, 'id'> & { user_id: string }) {
   const { data, error } = await supabase
     .from('projects')
     .insert(project)

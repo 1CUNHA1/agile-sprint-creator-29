@@ -26,9 +26,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
   
   // If we're on the dashboard page but there's no project param, redirect to projects
-  if (location.pathname === '/dashboard' && !location.search.includes('project=') && !location.search.includes('sprint=')) {
-    return <Navigate to="/projects" />;
-  }
+  // if (location.pathname === '/dashboard' && !location.search.includes('project=') && !location.search.includes('sprint=')) {
+  //   return <Navigate to="/" />;
+  // }
   
   return <>{children}</>;
 };

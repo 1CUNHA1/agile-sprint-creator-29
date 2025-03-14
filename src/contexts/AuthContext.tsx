@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       // Redirect to projects page instead of dashboard
-      navigate('/projects');
+      navigate('/');
     } catch (error) {
       console.error('Login failed', error);
       toast({

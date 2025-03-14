@@ -20,7 +20,7 @@ const Signup = () => {
   // Add effect to redirect when auth state changes
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/projects');
+      navigate('/');
     }
   }, [isAuthenticated, navigate]);
 
