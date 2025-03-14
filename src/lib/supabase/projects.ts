@@ -3,35 +3,19 @@ import { supabase } from './client';
 import { type Project } from '@/types/user';
 
 /**
- * Fetches all projects a user has access to
- * @param userId - The user's ID
- * @returns Array of projects
+ * Fetches all projects in the database
+ * @returns Array of all projects
  */
-export async function fetchProjects(userId: string) {
+export async function fetchProjects() {
   try {
-    // Get projects the user owns
-    const { data: ownedProjects, error: ownedError } = await supabase
+    // Get all projects from the database
+    const { data, error } = await supabase
       .from('projects')
-      .select('*')
-      .eq('user_id', userId);
+      .select('*');
     
-    if (ownedError) throw ownedError;
+    if (error) throw error;
     
-    // Get projects the user is a member of
-    const { data: memberProjects, error: memberError } = await supabase
-      .from('projects')
-      .select('*')
-      .contains('members', [userId]);
-    
-    if (memberError) throw memberError;
-    
-    // Combine and deduplicate projects
-    const allProjects = [...(ownedProjects || []), ...(memberProjects || [])];
-    const uniqueProjects = Array.from(
-      new Map(allProjects.map((project) => [project.id, project])).values()
-    );
-    
-    return uniqueProjects as Project[];
+    return data as Project[];
   } catch (error) {
     console.error('Error fetching projects:', error);
     return [];

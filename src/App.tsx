@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
-import ProjectSelector from "@/components/ProjectSelector";
+import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
@@ -28,12 +28,12 @@ const App = () => (
             {/* Landing page as the root path */}
             <Route path="/" element={<LandingPage />} />
             
-            {/* Project selection screen */}
+            {/* Dashboard showing all projects */}
             <Route
-              path="/projects"
+              path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <ProjectSelector />
+                  <Dashboard />
                 </ProtectedRoute>
               }
             />
@@ -54,16 +54,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <SprintPage />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Dashboard for viewing/editing a specific project */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Index />
                 </ProtectedRoute>
               }
             />

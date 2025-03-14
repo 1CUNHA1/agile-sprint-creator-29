@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { AuthState, User } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
@@ -101,8 +100,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         duration: 3000,
       });
       
-      // Redirect to projects page instead of dashboard
-      navigate('/projects');
+      // Redirect to dashboard
+      navigate('/dashboard');
     } catch (error) {
       console.error('Login failed', error);
       toast({
@@ -137,8 +136,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // If user is successfully created (and email confirmation is not required)
       if (data.user) {
-        // Go directly to projects page - no need to check for table existence
-        navigate('/projects');
+        // Go directly to dashboard
+        navigate('/dashboard');
       } else {
         toast({
           title: 'Verification required',
