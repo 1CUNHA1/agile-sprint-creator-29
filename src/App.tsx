@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
+import ProjectPage from "./pages/ProjectPage";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,16 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Project page */}
+            <Route
+              path="/project/:projectId"
+              element={
+                <ProtectedRoute>
+                  <ProjectPage />
                 </ProtectedRoute>
               }
             />

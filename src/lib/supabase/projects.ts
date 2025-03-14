@@ -70,14 +70,20 @@ export async function joinProject(code: string, userId: string) {
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('code', code)
-      .single();
-      
+      .eq('code', "HGF462")
+      .maybeSingle();
+    
+    console.log("DEBUG - here");
+    console.log(data);
+    console.log(code);
     if (error) throw error;
     
     if (!data) {
+      console.log("--PANIC!--"); //not here
       throw new Error('Project not found with this code');
     }
+    console.log("DEBUG - here");
+    console.log(data);
     
     // If user is already a member, just return the project
     if (data.members && data.members.includes(userId)) {
