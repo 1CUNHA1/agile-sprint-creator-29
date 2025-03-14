@@ -35,34 +35,34 @@ export type Database = {
       }
       projects: {
         Row: {
-          id: string;
-          name: string;
-          description: string | null;
-          created_at: string;
-          user_id: string;
-          code: string;
-          members: string[];
-        };
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          members: string[] | null
+          name: string
+          user_id: string
+        }
         Insert: {
-          id?: string;
-          name: string;
-          description?: string | null;
-          created_at?: string;
-          user_id: string;
-          code: string;
-          members?: string[];
-        };
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          members?: string[] | null
+          name: string
+          user_id: string
+        }
         Update: {
-          id?: string;
-          name?: string;
-          description?: string | null;
-          created_at?: string;
-          user_id?: string;
-          code?: string;
-          members?: string[];
-        };
-        Relationships: [];
-      };
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          members?: string[] | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sprints: {
         Row: {
           created_at: string
@@ -70,6 +70,7 @@ export type Database = {
           end_date: string | null
           id: string
           name: string
+          project_id: string | null
           start_date: string | null
           user_id: string
         }
@@ -79,6 +80,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           name: string
+          project_id?: string | null
           start_date?: string | null
           user_id: string
         }
@@ -88,10 +90,19 @@ export type Database = {
           end_date?: string | null
           id?: string
           name?: string
+          project_id?: string | null
           start_date?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sprints_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {
