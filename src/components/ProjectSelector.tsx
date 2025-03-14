@@ -69,7 +69,8 @@ const ProjectSelector = () => {
       const newProject = await createProject({
         name: projectName.trim(),
         description: projectDescription.trim(),
-        owner_id: user.id,
+        created_at: Date.now().toString(),
+        user_id: user.id,
         code: projectCode,
         members: [user.id],
       });

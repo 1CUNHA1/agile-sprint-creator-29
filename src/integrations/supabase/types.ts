@@ -33,6 +33,36 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          created_at: string;
+          user_id: string;
+          code: string;
+          members: string[];
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          created_at?: string;
+          user_id: string;
+          code: string;
+          members?: string[];
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          created_at?: string;
+          user_id?: string;
+          code?: string;
+          members?: string[];
+        };
+        Relationships: [];
+      };
       sprints: {
         Row: {
           created_at: string
