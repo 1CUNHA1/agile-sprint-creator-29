@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Project } from "@/types/user";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { fetchProjects, createProject, joinProject } from "@/lib/supabase";
 import { AlertCircle, Plus, Users, Home } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -23,80 +24,27 @@ const ProjectSelector = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    const loadProjects = async () => {
       if (!user) return;
       
       try {
         setIsLoading(true);
-        
-        // First, check if projects table exists
-        const { error: checkError } = await supabase.from('projects').select('id').limit(1);
-        
-        // If table doesn't exist, create it
-        if (checkError && checkError.code === '42P01') {
-          console.log('Projects table does not exist, attempting to create it');
-          
-          try {
-            // Try to create the table via RPC (this may fail in development)
-            // Fix: Remove the .catch() method which is causing TypeScript errors
-            await supabase.rpc('create_projects_table_if_not_exists');
-            console.log('RPC call completed');
-          } catch (e) {
-            console.log('RPC unavailable:', e);
-            // This is expected to fail in development, we'll handle project creation in the UI
-          }
-          
-          // Try again after creating the table
-          const secondCheck = await supabase.from('projects').select('id').limit(1);
-          
-          if (secondCheck.error && secondCheck.error.code === '42P01') {
-            console.log('Still no projects table, setting empty projects array');
-            setProjects([]);
-            setIsLoading(false);
-            return;
-          }
-        }
-        
-        // Get projects the user has created
-        const { data: ownedProjects, error: ownedError } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('owner_id', user.id);
-          
-        if (ownedError && ownedError.code !== '42P01') throw ownedError;
-        
-        // Get projects the user is a member of
-        const { data: memberProjects, error: memberError } = await supabase
-          .from('projects')
-          .select('*')
-          .contains('members', [user.id]);
-          
-        if (memberError && memberError.code !== '42P01') throw memberError;
-        
-        // Combine and deduplicate projects
-        const allProjects = [...(ownedProjects || []), ...(memberProjects || [])];
-        const uniqueProjects = Array.from(
-          new Map(allProjects.map((project) => [project.id, project])).values()
-        );
-        
-        setProjects(uniqueProjects as Project[]);
+        const userProjects = await fetchProjects(user.id);
+        setProjects(userProjects);
       } catch (error) {
-        console.error('Error fetching projects:', error);
-        if (error instanceof Error && !error.message.includes('42P01')) {
-          toast({
-            title: 'Error',
-            description: 'Failed to load your projects',
-            variant: 'destructive',
-            duration: 5000,
-          });
-        }
-        setProjects([]);
+        console.error('Error loading projects:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load your projects',
+          variant: 'destructive',
+          duration: 5000,
+        });
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchProjects();
+    loadProjects();
   }, [user, toast]);
 
   const handleCreateProject = async (e: React.FormEvent) => {
@@ -118,58 +66,22 @@ const ProjectSelector = () => {
       // Generate a unique project code
       const projectCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       
-      // First check if the table exists
-      const { error: checkError } = await supabase.from('projects').select('id').limit(1);
+      const newProject = await createProject({
+        name: projectName.trim(),
+        description: projectDescription.trim(),
+        owner_id: user.id,
+        code: projectCode,
+        members: [user.id],
+      });
       
-      // If table doesn't exist, create it first
-      if (checkError && checkError.code === '42P01') {
-        console.log('Projects table does not exist, creating it first');
-        
-        // Fix: Remove the .catch() method which is causing TypeScript errors
-        try {
-          await supabase.rpc('create_projects_table_if_not_exists');
-          console.log('RPC call completed for table creation');
-        } catch (tableErr) {
-          console.error('Unable to create table via RPC:', tableErr);
-          // Continue anyway
-        }
-      }
+      toast({
+        title: 'Success',
+        description: 'Project created successfully',
+        duration: 3000,
+      });
       
-      // Now try to insert the project
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          name: projectName.trim(),
-          description: projectDescription.trim(),
-          owner_id: user.id,
-          code: projectCode,
-          members: [user.id],
-        })
-        .select()
-        .single();
-        
-      if (error) {
-        if (error.code === '42P01') {
-          // Table doesn't exist
-          toast({
-            title: 'Database Setup Required',
-            description: 'Please contact your administrator to set up the database schema',
-            variant: 'destructive',
-            duration: 5000,
-          });
-        } else {
-          throw error;
-        }
-      } else if (data) {
-        toast({
-          title: 'Success',
-          description: 'Project created successfully',
-          duration: 3000,
-        });
-        
-        // Navigate to the project
-        navigate(`/project/${data.id}`);
-      }
+      // Navigate to the project
+      navigate(`/project/${newProject.id}`);
     } catch (error) {
       console.error('Error creating project:', error);
       toast({
@@ -193,44 +105,16 @@ const ProjectSelector = () => {
     }
     
     try {
-      // Find the project with the given code
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('code', joinCode.trim())
-        .single();
-        
-      if (error) throw error;
-      
-      if (!data) {
-        setJoinError("Project not found with this code");
-        return;
-      }
-      
-      // Check if user is already a member
-      if (data.members && data.members.includes(user.id)) {
-        navigate(`/project/${data.id}`);
-        return;
-      }
-      
-      // Add user to project members
-      const updatedMembers = [...(data.members || []), user.id];
-      
-      const { error: updateError } = await supabase
-        .from('projects')
-        .update({ members: updatedMembers })
-        .eq('id', data.id);
-        
-      if (updateError) throw updateError;
+      const project = await joinProject(joinCode.trim(), user.id);
       
       toast({
         title: 'Success',
-        description: `You've joined ${data.name}`,
+        description: `You've joined ${project.name}`,
         duration: 3000,
       });
       
       // Navigate to the project
-      navigate(`/project/${data.id}`);
+      navigate(`/project/${project.id}`);
     } catch (error) {
       console.error('Error joining project:', error);
       setJoinError("Invalid project code or project not found");

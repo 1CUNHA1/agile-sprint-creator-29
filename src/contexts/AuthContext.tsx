@@ -4,7 +4,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
-import { ensureProjectsTable } from '@/lib/supabase';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
@@ -137,17 +136,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // If user is successfully created (and email confirmation is not required)
       if (data.user) {
-        try {
-          // First, try to create the projects table if it doesn't exist
-          await ensureProjectsTable();
-          console.log('Projects table created or already exists');
-          
-          // Redirect to projects page
-          navigate('/projects');
-        } catch (err) {
-          console.error('Error setting up projects:', err);
-          navigate('/projects');
-        }
+        // Go directly to projects page - no need to check for table existence
+        navigate('/projects');
       } else {
         toast({
           title: 'Verification required',
