@@ -68,6 +68,12 @@ const ProjectSelector = () => {
       
       // Generate a unique project code
       const projectCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      console.log("--DEBUG--");
+      console.log(projectCode);
+      console.log(projectName);
+      console.log(projectDescription);
+      console.log(user.id);
+      console.log(new Date().toISOString())
       
       const newProject = await createProject({
         name: projectName.trim(),
