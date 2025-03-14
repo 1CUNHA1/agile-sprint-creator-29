@@ -15,6 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const ProjectSelector = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -63,16 +64,18 @@ const ProjectSelector = () => {
     }
     
     try {
+      setIsSubmitting(true);
+      
       // Generate a unique project code
       const projectCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       
       const newProject = await createProject({
         name: projectName.trim(),
-        description: projectDescription.trim(),
-        created_at: Date.now().toString(),
+        description: projectDescription.trim() || null,
         user_id: user.id,
         code: projectCode,
         members: [user.id],
+        created_at: new Date().toISOString(),
       });
       
       toast({
@@ -87,10 +90,12 @@ const ProjectSelector = () => {
       console.error('Error creating project:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create project',
+        description: 'Failed to create project. Please try again.',
         variant: 'destructive',
         duration: 5000,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -106,6 +111,8 @@ const ProjectSelector = () => {
     }
     
     try {
+      setIsSubmitting(true);
+      
       const project = await joinProject(joinCode.trim(), user.id);
       
       toast({
@@ -119,6 +126,8 @@ const ProjectSelector = () => {
     } catch (error) {
       console.error('Error joining project:', error);
       setJoinError("Invalid project code or project not found");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -221,9 +230,18 @@ const ProjectSelector = () => {
                     placeholder="A brief description of your project"
                   />
                 </div>
-                <Button type="submit" className="w-full">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Project
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Project
+                    </>
+                  )}
                 </Button>
               </form>
             </CardContent>
@@ -263,8 +281,15 @@ const ProjectSelector = () => {
                   </Alert>
                 )}
                 
-                <Button type="submit" className="w-full">
-                  Join Project
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2"></div>
+                      Joining...
+                    </>
+                  ) : (
+                    <>Join Project</>
+                  )}
                 </Button>
               </form>
             </CardContent>

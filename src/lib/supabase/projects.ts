@@ -13,7 +13,7 @@ export async function fetchProjects(userId: string) {
     const { data: ownedProjects, error: ownedError } = await supabase
       .from('projects')
       .select('*')
-      .eq('owner_id', userId);
+      .eq('user_id', userId);
     
     if (ownedError) throw ownedError;
     
@@ -44,18 +44,23 @@ export async function fetchProjects(userId: string) {
  * @returns The created project
  */
 export async function createProject(project: Omit<Project, 'id'>) {
-  const { data, error } = await supabase
-    .from('projects')
-    .insert(project)
-    .select()
-    .single();
-  
-  if (error) {
-    console.error('Error creating project:', error);
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .insert(project)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating project:', error);
+      throw error;
+    }
+    
+    return data as Project;
+  } catch (error) {
+    console.error('Error in createProject:', error);
     throw error;
   }
-  
-  return data as Project;
 }
 
 /**

@@ -23,9 +23,9 @@ export interface Profile {
 export interface Project {
   id: string;
   name: string;
-  description?: string;
-  owner_id: string;
+  description: string | null;
+  user_id: string;
   code: string;
   members: string[];
-  created_at?: string;
+  created_at: string;
 }
