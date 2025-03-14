@@ -36,6 +36,8 @@ const Dashboard = () => {
         const { data, error } = await supabase
           .from('projects')
           .select('*');
+        console.log("--DEBUG--");
+        console.log(data);
 
         if (error) throw error;
         setProjects(data || []);

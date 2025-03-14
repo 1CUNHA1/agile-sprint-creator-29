@@ -1,3 +1,4 @@
+
 export interface Project {
     id: string;
     name: string;
@@ -6,5 +7,5 @@ export interface Project {
     user_id: string;
     code: string;
     members: string[];
-};
+}
   
