@@ -1,126 +1,125 @@
+
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowRight, Star } from 'lucide-react';
-import React from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { LayoutDashboard, LogOut } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import LogoutButton from '@/components/LogoutButton';
+
+// Define Project type based on Supabase schema
+interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  code: string;
+  user_id: string;
+  members: string[] | null;
+  created_at: string;
+}
 
 const Dashboard = () => {
-    const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
-  
-    const handleGetStarted = () => {
-      if (isAuthenticated) {
-        navigate('/dashboard');
-      } else {
-        navigate('/signup');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Fetch all projects
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*');
+
+        if (error) throw error;
+        setProjects(data || []);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        toast({
+          title: 'Failed to load projects',
+          description: 'There was an error loading the projects.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
       }
     };
-  
-    return (
-      <div className="min-h-screen flex flex-col">
-        {/* Navbar */}
-        <nav className="bg-background border-b border-border py-4 px-6">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <Star className="h-6 w-6 text-primary" />
-              <span className="font-bold text-xl">Sprint Master</span>
+
+    fetchProjects();
+  }, [toast]);
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header/Navbar */}
+      <header className="bg-card border-b border-border sticky top-0 z-10">
+        <div className="container mx-auto py-4 px-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <LayoutDashboard className="h-6 w-6 text-primary" />
+              <h1 className="text-xl font-bold">Sprint Master</h1>
             </div>
-            <div className="space-x-4">
-              {isAuthenticated ? (
-                <Button onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
-              ) : (
-                <>
-                  <Button variant="ghost" onClick={() => navigate('/login')}>Log in</Button>
-                  <Button onClick={() => navigate('/signup')}>Sign up</Button>
-                </>
-              )}
-            </div>
+            <LogoutButton />
           </div>
-        </nav>
-  
-        {/* Hero Section */}
-        <section className="bg-gradient-to-br from-secondary to-background py-20 px-6 flex-grow">
-          <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground">
-                Manage Your Sprints <span className="text-primary">Effortlessly</span>
-              </h1>
-              <p className="text-lg text-muted-foreground">
-                Sprint Master helps teams organize tasks, plan sprints, and deliver projects on time with a simple yet powerful interface.
-              </p>
-              <div className="space-y-4">
-                <Button size="lg" onClick={handleGetStarted} className="group">
-                  Get Started
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="container mx-auto py-8 px-6">
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LayoutDashboard className="h-5 w-5 text-primary" />
+              Project Dashboard
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex justify-center p-8">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
               </div>
-            </div>
-            <div className="relative hidden md:block">
-              <div className="absolute inset-0 bg-primary/10 rounded-lg -rotate-3 scale-95 transform"></div>
-              <div className="bg-card border border-border rounded-lg shadow-xl p-6">
-                <div className="space-y-4">
-                  <div className="bg-muted p-3 rounded-md">
-                    <div className="h-4 w-3/4 bg-muted-foreground/20 rounded"></div>
-                  </div>
-                  <div className="space-y-2">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="bg-background p-3 rounded-md border border-border flex items-center">
-                        <div className="h-4 w-4 bg-primary/20 rounded mr-3"></div>
-                        <div className="h-4 w-2/3 bg-muted-foreground/20 rounded"></div>
-                      </div>
+            ) : projects.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No projects available.</p>
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Project Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Created At</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {projects.map((project) => (
+                      <TableRow 
+                        key={project.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => navigate(`/projects/${project.id}`)}
+                      >
+                        <TableCell className="font-medium">{project.name}</TableCell>
+                        <TableCell>{project.description || 'No description'}</TableCell>
+                        <TableCell>{project.code}</TableCell>
+                        <TableCell>{new Date(project.created_at).toLocaleDateString()}</TableCell>
+                      </TableRow>
                     ))}
-                  </div>
-                  <div className="flex justify-end">
-                    <div className="h-8 w-24 bg-primary/20 rounded"></div>
-                  </div>
-                </div>
+                  </TableBody>
+                </Table>
               </div>
-            </div>
-          </div>
-        </section>
-  
-        {/* Features Section */}
-        <section className="py-20 px-6 bg-card">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Powerful Features</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Everything you need to manage your agile development process
-              </p>
-            </div>
-          </div>
-        </section>
-  
-        {/* CTA Section */}
-        <section className="py-16 px-6 bg-gradient-to-r from-primary/20 to-secondary/20">
-          <div className="max-w-4xl mx-auto text-center space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold">Ready to boost your team's productivity?</h2>
-            <p className="text-lg text-muted-foreground">
-              Join thousands of teams who use Sprint Master to organize their work and deliver on time.
-            </p>
-            <Button size="lg" onClick={handleGetStarted}>
-              Start for free
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </section>
-  
-        {/* Footer */}
-        <footer className="bg-background border-t border-border py-8 px-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="flex items-center space-x-2 mb-4 md:mb-0">
-                <Star className="h-5 w-5 text-primary" />
-                <span className="font-semibold">Sprint Master</span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                © {new Date().getFullYear()} Sprint Master. All rights reserved.
-              </div>
-            </div>
-          </div>
-        </footer>
-      </div>
-    );
-  };
-  
-  export default Dashboard;
+            )}
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+};
+
+export default Dashboard;
