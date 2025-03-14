@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { AuthState, User } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
