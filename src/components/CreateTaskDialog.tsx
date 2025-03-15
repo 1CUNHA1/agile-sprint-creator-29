@@ -28,7 +28,7 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
   const [points, setPoints] = useState("1");
   const [assignees, setAssignees] = useState<string[]>([]);
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
-  const [memberProfiles, setMemberProfiles] = useState<User[]>([]);
+  const [memberProfiles, setMemberProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -48,13 +48,14 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
       
       // Fetch project members
       const members = await fetchProjectMembers(projectId);
+      console.log("DEBUG: " + members);
       setProjectMembers(members);
       
       if (members.length > 0) {
         // Fetch member profiles
         const { data: profiles, error } = await supabase
           .from('profiles')
-          .select('id, name, email, avatar_url')
+          .select('id, name, avatar_url')
           .in('id', members);
           
         if (error) throw error;
@@ -62,7 +63,6 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
         setMemberProfiles(profiles.map(profile => ({
           id: profile.id,
           name: profile.name || 'Unknown User',
-          email: profile.email || '',
           avatarUrl: profile.avatar_url || ''
         })));
       }
