@@ -7,17 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Task } from "@/types/task";
 import { User } from "@/types/user";
-import { Avatar } from "@/components/ui/avatar";
-import { Check } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Check, UserIcon } from "lucide-react";
 import { fetchProjectMembers } from "@/lib/supabase/tasks";
 import { useToast } from "@/hooks/use-toast";
-
-// Temporary mock data, will be replaced with real data from Supabase
-const MOCK_USERS: User[] = [
-  { id: "1", name: "John Doe", email: "john.doe@example.com", avatarUrl: "https://github.com/shadcn.png" },
-  { id: "2", name: "Jane Smith", email: "jane.smith@example.com", avatarUrl: "https://github.com/shadcn.png" },
-  { id: "3", name: "Bob Johnson", email: "bob.johnson@example.com", avatarUrl: "https://github.com/shadcn.png" },
-];
+import { supabase } from "@/lib/supabase/client";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -34,28 +28,55 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
   const [points, setPoints] = useState("1");
   const [assignees, setAssignees] = useState<string[]>([]);
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
+  const [memberProfiles, setMemberProfiles] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch project members when dialog opens
-    if (open && projectId) {
-      const getProjectMembers = async () => {
-        try {
-          const members = await fetchProjectMembers(projectId);
-          setProjectMembers(members);
-        } catch (error) {
-          console.error("Failed to fetch project members:", error);
-          toast({
-            title: "Error",
-            description: "Failed to load project members",
-            variant: "destructive",
-          });
-        }
-      };
-      
-      getProjectMembers();
+    // Reset form when dialog opens
+    if (open) {
+      resetForm();
+      loadProjectMembers();
     }
-  }, [open, projectId, toast]);
+  }, [open, projectId]);
+
+  const loadProjectMembers = async () => {
+    if (!projectId) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Fetch project members
+      const members = await fetchProjectMembers(projectId);
+      setProjectMembers(members);
+      
+      if (members.length > 0) {
+        // Fetch member profiles
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('id, name, email, avatar_url')
+          .in('id', members);
+          
+        if (error) throw error;
+        
+        setMemberProfiles(profiles.map(profile => ({
+          id: profile.id,
+          name: profile.name || 'Unknown User',
+          email: profile.email || '',
+          avatarUrl: profile.avatar_url || ''
+        })));
+      }
+    } catch (error) {
+      console.error("Failed to fetch project members:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load project members",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,9 +114,6 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
     );
   };
 
-  // Filter MOCK_USERS to only show project members
-  const filteredUsers = MOCK_USERS.filter(user => projectMembers.includes(user.id));
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -124,9 +142,13 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
           </div>
           <div className="space-y-2">
             <Label>Assignees</Label>
-            <div className="flex flex-wrap gap-2">
-              {filteredUsers.length > 0 ? (
-                filteredUsers.map((user) => (
+            {isLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+              </div>
+            ) : memberProfiles.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {memberProfiles.map((user) => (
                   <Button
                     key={user.id}
                     type="button"
@@ -135,18 +157,21 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
                     onClick={() => toggleAssignee(user.id)}
                   >
                     <Avatar className="w-6 h-6">
-                      <img src={user.avatarUrl} alt={user.name} />
+                      <AvatarImage src={user.avatarUrl} alt={user.name} />
+                      <AvatarFallback>
+                        <UserIcon className="w-4 h-4" />
+                      </AvatarFallback>
                     </Avatar>
                     {user.name}
                     {assignees.includes(user.id) && (
                       <Check className="w-4 h-4" />
                     )}
                   </Button>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No project members available</p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No project members available</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="priority">Priority</Label>

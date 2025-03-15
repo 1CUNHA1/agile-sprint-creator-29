@@ -39,6 +39,28 @@ export async function fetchProjects(userId: string) {
 }
 
 /**
+ * Fetches a single project by ID
+ * @param projectId - The project's ID
+ * @returns The project or null if not found
+ */
+export async function fetchProject(projectId: string): Promise<Project | null> {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .single();
+    
+    if (error) throw error;
+    
+    return data as Project;
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    return null;
+  }
+}
+
+/**
  * Creates a new project
  * @param project - The project data
  * @returns The created project
@@ -70,13 +92,12 @@ export async function joinProject(code: string, userId: string) {
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('code', "HGF462")
+      .eq('code', code)
       .maybeSingle();
     
     if (error) throw error;
     
     if (!data) {
-      console.log("--PANIC!--"); //not here
       throw new Error('Project not found with this code');
     }
     

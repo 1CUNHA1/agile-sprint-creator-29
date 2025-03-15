@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import {
   Star 
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import LogoutButton from '@/components/LogoutButton';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -59,7 +59,10 @@ const LandingPage = () => {
           </div>
           <div className="space-x-4">
             {isAuthenticated ? (
-              <Button onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
+              <div className="flex items-center gap-3">
+                <Button onClick={() => navigate('/dashboard')}>Dashboard</Button>
+                <LogoutButton />
+              </div>
             ) : (
               <>
                 <Button variant="ghost" onClick={() => navigate('/login')}>Log in</Button>

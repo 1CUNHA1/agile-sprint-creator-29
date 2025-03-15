@@ -7,12 +7,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import { Project } from "@/types/user";
+import LogoutButton from "@/components/LogoutButton";
 
 const Dashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,6 +32,28 @@ const Dashboard = () => {
         if (error) throw error;
         
         setProjects(data as Project[] || []);
+
+        // Collect all unique user IDs from projects
+        const userIds = new Set<string>();
+        data?.forEach(project => {
+          if (project.user_id) userIds.add(project.user_id);
+        });
+
+        // Fetch user profiles for those IDs
+        if (userIds.size > 0) {
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, name')
+            .in('id', Array.from(userIds));
+
+          if (!profilesError && profiles) {
+            const nameMap: Record<string, string> = {};
+            profiles.forEach(profile => {
+              nameMap[profile.id] = profile.name || 'Unknown User';
+            });
+            setUserNames(nameMap);
+          }
+        }
       } catch (error) {
         console.error('Failed to load projects', error);
         toast({
@@ -47,22 +71,12 @@ const Dashboard = () => {
     }
   }, [user, toast]);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      // The AuthContext will handle the state update and redirection
-    } catch (error) {
-      console.error('Logout failed', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to log out. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const handleViewProject = (projectId: string) => {
     navigate(`/project/${projectId}`);
+  };
+
+  const getUserName = (userId: string) => {
+    return userNames[userId] || userId.substring(0, 8) + "...";
   };
 
   if (isLoading) {
@@ -86,14 +100,7 @@ const Dashboard = () => {
               <Home className="h-4 w-4 mr-2" />
               Home
             </Button>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+            <LogoutButton variant="outline" />
           </div>
         </header>
 
@@ -120,7 +127,7 @@ const Dashboard = () => {
                           {project.description || "No description"}
                         </td>
                         <td className="py-3 px-4">
-                          {project.user_id ? project.user_id.substring(0, 8) + "..." : "Unknown"}
+                          {getUserName(project.user_id || '')}
                         </td>
                         <td className="py-3 px-4">
                           {project.members ? project.members.length : 0} members

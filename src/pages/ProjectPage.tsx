@@ -1,17 +1,18 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus, Home } from "lucide-react";
+import { Plus, Home, LayoutDashboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchProjects } from "@/lib/supabase/projects";
 import { fetchSprints } from "@/lib/supabase/sprints";
 import CreateSprintDialog from "@/components/CreateSprintDialog";
-import SprintList from "@/components/SprintList";
 import ProductBacklog from "@/components/ProductBacklog";
 import { Project } from "@/types/user";
 import { Sprint } from "@/types/sprint";
+import SprintList from "@/components/SprintList";
 
 const ProjectPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -65,6 +66,10 @@ const ProjectPage = () => {
   const handleGoHome = () => {
     navigate('/');
   };
+
+  const handleGoDashboard = () => {
+    navigate('/dashboard');
+  };
   
   if (loading) {
     return (
@@ -91,6 +96,10 @@ const ProjectPage = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">{project?.name}</h1>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleGoDashboard}>
+            <LayoutDashboard className="mr-2 h-4 w-4" />
+            Dashboard
+          </Button>
           <Button variant="outline" onClick={handleGoHome}>
             <Home className="mr-2 h-4 w-4" />
             Home
