@@ -11,6 +11,7 @@ interface TaskCardProps {
   onDelete: (taskId: string) => void;
   onMove?: (task: Task) => void;
   showMoveButton?: boolean;
+  isDraggable?: boolean;
 }
 
 const priorityColors = {
@@ -26,9 +27,9 @@ const statusColors = {
   done: "bg-green-100 text-green-800",
 };
 
-const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false }: TaskCardProps) => {
+const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false, isDraggable = false }: TaskCardProps) => {
   return (
-    <Card className="mb-4 hover:shadow-md transition-shadow">
+    <Card className={`mb-4 ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''} hover:shadow-md transition-shadow`}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg">{task.title}</CardTitle>

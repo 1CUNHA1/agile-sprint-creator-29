@@ -8,7 +8,7 @@ import { fetchSprintTasks, updateTask, deleteTask } from "@/lib/supabase/tasks";
 import TaskCard from "@/components/TaskCard";
 import { useToast } from "@/hooks/use-toast";
 import EditTaskDialog from "@/components/EditTaskDialog";
-import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, closestCenter, DragStartEvent, DragOverlay } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -18,6 +18,7 @@ interface KanbanColumnProps {
   tasks: Task[];
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  columnId: string;
 }
 
 interface KanbanBoardProps {
@@ -35,15 +36,15 @@ const SortableTaskCard = ({ task, onEdit, onDelete }: { task: Task; onEdit: (tas
   
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <TaskCard task={task} onEdit={onEdit} onDelete={onDelete} />
+      <TaskCard task={task} onEdit={onEdit} onDelete={onDelete} isDraggable={true} />
     </div>
   );
 };
 
 // Individual Kanban column
-const KanbanColumn = ({ title, tasks, onEdit, onDelete }: KanbanColumnProps) => {
+const KanbanColumn = ({ title, tasks, onEdit, onDelete, columnId }: KanbanColumnProps) => {
   return (
-    <Card className="flex-1 min-w-[250px] max-w-[350px] bg-secondary/30">
+    <Card className="flex-1 min-w-[250px] max-w-[350px] bg-secondary/30" id={columnId}>
       <CardHeader className="bg-muted/30 pb-2">
         <CardTitle className="text-md font-medium">{title} ({tasks.length})</CardTitle>
       </CardHeader>
@@ -68,6 +69,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
   const [loading, setLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   const fetchTasks = async () => {
     try {
@@ -121,8 +123,18 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     setSelectedTask(null);
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const taskId = active.id as string;
+    const foundTask = tasks.find(t => t.id === taskId);
+    if (foundTask) {
+      setActiveTask(foundTask);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveTask(null);
     
     if (!over || active.id === over.id) {
       return;
@@ -133,28 +145,17 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     
     if (!task || !user) return;
     
-    // Determine which column the task was dropped into based on DOM structure
-    const columns = document.querySelectorAll('.kanban-column');
     let newStatus = task.status;
     
-    // Find the column containing the drop target
-    // Fixed: Properly handle UniqueIdentifier without direct conversion to HTMLElement
-    columns.forEach((column, index) => {
-      const columnId = `column-${index}`;
-      if (over.id === columnId) {
-        switch (index) {
-          case 0: newStatus = "todo"; break;
-          case 1: newStatus = "in-progress"; break;
-          case 2: newStatus = "in-review"; break;
-          case 3: newStatus = "done"; break;
-        }
-      }
-    });
+    // Check if dropped over a column
+    if (over.id === 'column-todo') newStatus = 'todo';
+    else if (over.id === 'column-in-progress') newStatus = 'in-progress';
+    else if (over.id === 'column-in-review') newStatus = 'in-review';
+    else if (over.id === 'column-done') newStatus = 'done';
     
     if (newStatus === task.status) return;
     
     try {
-      // Fixed: Add user_id to the task object when updating
       const updatedTask = { 
         ...task, 
         status: newStatus,
@@ -196,41 +197,52 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     <div className="h-full">
       <h2 className="text-xl font-semibold mb-4">Sprint Board</h2>
       
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext 
+        collisionDetection={closestCenter} 
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <div className="flex gap-4 overflow-x-auto pb-4">
-          <div className="kanban-column" id="column-0">
-            <KanbanColumn 
-              title="To Do" 
-              tasks={todoTasks} 
-              onEdit={handleEditTask} 
-              onDelete={handleDeleteTask} 
-            />
-          </div>
-          <div className="kanban-column" id="column-1">
-            <KanbanColumn 
-              title="In Progress" 
-              tasks={inProgressTasks} 
-              onEdit={handleEditTask} 
-              onDelete={handleDeleteTask} 
-            />
-          </div>
-          <div className="kanban-column" id="column-2">
-            <KanbanColumn 
-              title="In Review" 
-              tasks={inReviewTasks} 
-              onEdit={handleEditTask} 
-              onDelete={handleDeleteTask} 
-            />
-          </div>
-          <div className="kanban-column" id="column-3">
-            <KanbanColumn 
-              title="Done" 
-              tasks={doneTasks} 
-              onEdit={handleEditTask} 
-              onDelete={handleDeleteTask} 
-            />
-          </div>
+          <KanbanColumn 
+            title="To Do" 
+            tasks={todoTasks} 
+            onEdit={handleEditTask} 
+            onDelete={handleDeleteTask}
+            columnId="column-todo"
+          />
+          <KanbanColumn 
+            title="In Progress" 
+            tasks={inProgressTasks} 
+            onEdit={handleEditTask} 
+            onDelete={handleDeleteTask}
+            columnId="column-in-progress"
+          />
+          <KanbanColumn 
+            title="In Review" 
+            tasks={inReviewTasks} 
+            onEdit={handleEditTask} 
+            onDelete={handleDeleteTask}
+            columnId="column-in-review"
+          />
+          <KanbanColumn 
+            title="Done" 
+            tasks={doneTasks} 
+            onEdit={handleEditTask} 
+            onDelete={handleDeleteTask}
+            columnId="column-done"
+          />
         </div>
+
+        <DragOverlay>
+          {activeTask ? (
+            <TaskCard 
+              task={activeTask} 
+              onEdit={() => {}} 
+              onDelete={() => {}} 
+              isDraggable={true}
+            />
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       {user && selectedTask && (
