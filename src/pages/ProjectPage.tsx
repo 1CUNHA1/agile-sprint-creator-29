@@ -226,6 +226,7 @@ const ProjectPage = () => {
         end_date: sprint.endDate,
         tasks: [],
         user_id: user.id,
+        created_at: new Date().toISOString(),
         project_id: projectId
       };
       
