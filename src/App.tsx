@@ -12,6 +12,7 @@ import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
 import ProjectPage from "./pages/ProjectPage";
+import SprintBoard from "./components/SprintBoard";
 
 const queryClient = new QueryClient();
 
@@ -26,8 +27,7 @@ const App = () => (
             {/* Landing page as the root path */}
             <Route path="/" element={<LandingPage />} />
             
-            
-            {/* Dashboard for viewing/editing a specific project */}
+            {/* Dashboard for viewing all projects */}
             <Route
               path="/dashboard"
               element={
@@ -43,6 +43,16 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <ProjectPage />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Sprint board */}
+            <Route
+              path="/sprint/:sprintId"
+              element={
+                <ProtectedRoute>
+                  <SprintBoard />
                 </ProtectedRoute>
               }
             />

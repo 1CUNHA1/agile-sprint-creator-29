@@ -29,10 +29,11 @@ export async function fetchTasks(userId: string) {
     description: task.description || '',
     priority: task.priority || 'medium',
     points: task.estimate || 0,
-    status: task.status as "todo" | "in-progress" | "done",
+    status: task.status as "todo" | "in-progress" | "in-review" | "done",
     assignees: task.assignee_ids || [],
     userId: task.user_id,
-    projectId: task.project_id
+    projectId: task.project_id,
+    sprintId: task.sprint_id
   }));
   
   return mappedTasks as Task[];
@@ -75,10 +76,11 @@ export async function createTask(task: Omit<Task, 'id'> & { user_id: string }) {
     description: data.description || '',
     priority: data.priority || 'medium',
     points: data.estimate || 0,
-    status: data.status as "todo" | "in-progress" | "done",
+    status: data.status as "todo" | "in-progress" | "in-review" | "done",
     assignees: data.assignee_ids || [],
     userId: data.user_id,
-    projectId: data.project_id
+    projectId: data.project_id,
+    sprintId: data.sprint_id
   } as Task;
 }
 
@@ -135,14 +137,14 @@ export async function deleteTask(id: string) {
 
 /**
  * Fetches tasks without a sprint (product backlog)
- * @param userId - The user's ID
+ * @param projectId - The project's ID
  * @returns Array of tasks
  */
-export async function fetchProductBacklog(userId: string) {
+export async function fetchProductBacklog(projectId: string) {
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
-    .eq('user_id', userId)
+    .eq('project_id', projectId)
     .is('sprint_id', null);
   
   if (error) {
@@ -161,10 +163,48 @@ export async function fetchProductBacklog(userId: string) {
     description: task.description || '',
     priority: task.priority || 'medium',
     points: task.estimate || 0,
-    status: task.status as "todo" | "in-progress" | "done",
+    status: task.status as "todo" | "in-progress" | "in-review" | "done",
     assignees: task.assignee_ids || [],
     userId: task.user_id,
-    projectId: task.project_id
+    projectId: task.project_id,
+    sprintId: task.sprint_id
+  }));
+  
+  return mappedTasks as Task[];
+}
+
+/**
+ * Fetches all tasks for a sprint
+ * @param sprintId - The sprint's ID
+ * @returns Array of tasks
+ */
+export async function fetchSprintTasks(sprintId: string) {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('sprint_id', sprintId);
+  
+  if (error) {
+    console.error('Error fetching sprint tasks:', error);
+    if (error.code === '42P01') {
+      // Table doesn't exist yet
+      return [];
+    }
+    throw error;
+  }
+  
+  // Map from database schema to our application schema
+  const mappedTasks = data.map(task => ({
+    id: task.id,
+    title: task.title,
+    description: task.description || '',
+    priority: task.priority || 'medium',
+    points: task.estimate || 0,
+    status: task.status as "todo" | "in-progress" | "in-review" | "done",
+    assignees: task.assignee_ids || [],
+    userId: task.user_id,
+    projectId: task.project_id,
+    sprintId: task.sprint_id
   }));
   
   return mappedTasks as Task[];
