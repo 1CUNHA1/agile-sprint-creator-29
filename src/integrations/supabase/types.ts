@@ -33,6 +33,32 @@ export type Database = {
         }
         Relationships: []
       }
+      project_members: {
+        Row: {
+          id: number
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: never
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          id?: never
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           code: string
@@ -66,32 +92,32 @@ export type Database = {
       sprints: {
         Row: {
           created_at: string
-          description: string | null
           end_date: string | null
           id: string
           name: string
           project_id: string | null
           start_date: string | null
+          tasks: string[] | null
           user_id: string
         }
         Insert: {
           created_at?: string
-          description?: string | null
           end_date?: string | null
           id?: string
           name: string
           project_id?: string | null
           start_date?: string | null
+          tasks?: string[] | null
           user_id: string
         }
         Update: {
           created_at?: string
-          description?: string | null
           end_date?: string | null
           id?: string
           name?: string
           project_id?: string | null
           start_date?: string | null
+          tasks?: string[] | null
           user_id?: string
         }
         Relationships: [
@@ -106,39 +132,52 @@ export type Database = {
       }
       tasks: {
         Row: {
+          assignee_ids: string[] | null
           created_at: string
           description: string | null
           estimate: number | null
           id: string
           priority: string
+          project_id: string | null
           sprint_id: string | null
           status: string
           title: string
           user_id: string
         }
         Insert: {
+          assignee_ids?: string[] | null
           created_at?: string
           description?: string | null
           estimate?: number | null
           id?: string
           priority?: string
+          project_id?: string | null
           sprint_id?: string | null
           status?: string
           title: string
           user_id: string
         }
         Update: {
+          assignee_ids?: string[] | null
           created_at?: string
           description?: string | null
           estimate?: number | null
           id?: string
           priority?: string
+          project_id?: string | null
           sprint_id?: string | null
           status?: string
           title?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_sprint_id_fkey"
             columns: ["sprint_id"]
