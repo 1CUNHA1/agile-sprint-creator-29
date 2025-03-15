@@ -23,7 +23,7 @@ export interface Profile {
 export interface Project {
   id: string;
   name: string;
-  description: string | null;
+  description?: string;
   user_id: string;
   code: string;
   members: string[];

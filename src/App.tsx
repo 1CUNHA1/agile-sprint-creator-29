@@ -6,11 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
-import Dashboard from "./pages/Dashboard";
+import ProjectPage from "./pages/ProjectPage";
+import SprintBoard from "./components/SprintBoard";
 
 const queryClient = new QueryClient();
 
@@ -25,12 +27,32 @@ const App = () => (
             {/* Landing page as the root path */}
             <Route path="/" element={<LandingPage />} />
             
-            {/* Dashboard showing all projects */}
+            {/* Dashboard for viewing all projects */}
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Project page */}
+            <Route
+              path="/project/:projectId"
+              element={
+                <ProtectedRoute>
+                  <ProjectPage />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Sprint board */}
+            <Route
+              path="/sprint/:sprintId"
+              element={
+                <ProtectedRoute>
+                  <SprintBoard />
                 </ProtectedRoute>
               }
             />

@@ -100,8 +100,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         duration: 3000,
       });
       
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Redirect to projects page instead of dashboard
+      navigate('/');
     } catch (error) {
       console.error('Login failed', error);
       toast({

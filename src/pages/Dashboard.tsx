@@ -1,125 +1,152 @@
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { LayoutDashboard, LogOut } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import LogoutButton from '@/components/LogoutButton';
-
-// Define Project type based on Supabase schema
-interface Project {
-  id: string;
-  name: string;
-  description: string | null;
-  code: string;
-  user_id: string;
-  members: string[] | null;
-  created_at: string;
-}
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Plus, LogOut, Home } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase/client";
+import { Project } from "@/types/user";
 
 const Dashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch all projects
   useEffect(() => {
     const fetchProjects = async () => {
+      if (!user) return;
+      
       try {
-        setLoading(true);
+        setIsLoading(true);
+        
+        // Fetch all projects from Supabase
         const { data, error } = await supabase
           .from('projects')
           .select('*');
-        console.log("--DEBUG--");
-        console.log(data);
-
+          
         if (error) throw error;
-        setProjects(data || []);
+        
+        setProjects(data as Project[] || []);
       } catch (error) {
-        console.error('Error fetching projects:', error);
+        console.error('Failed to load projects', error);
         toast({
-          title: 'Failed to load projects',
-          description: 'There was an error loading the projects.',
+          title: 'Error',
+          description: 'Failed to load projects',
           variant: 'destructive',
         });
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
+    
+    if (user) {
+      fetchProjects();
+    }
+  }, [user, toast]);
 
-    fetchProjects();
-  }, [toast]);
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // The AuthContext will handle the state update and redirection
+    } catch (error) {
+      console.error('Logout failed', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to log out. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleViewProject = (projectId: string) => {
+    navigate(`/project/${projectId}`);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary to-background">
+        <div className="text-center">
+          <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mb-4 mx-auto"></div>
+          <p className="text-muted-foreground">Loading projects...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header/Navbar */}
-      <header className="bg-card border-b border-border sticky top-0 z-10">
-        <div className="container mx-auto py-4 px-6">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <LayoutDashboard className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold">Sprint Master</h1>
-            </div>
-            <LogoutButton />
+    <div className="min-h-screen bg-gradient-to-br from-secondary to-background p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <header className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Projects Dashboard</h1>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => navigate('/')}>
+              <Home className="h-4 w-4 mr-2" />
+              Home
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main content */}
-      <main className="container mx-auto py-8 px-6">
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
-              Project Dashboard
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex justify-center p-8">
-                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-              </div>
-            ) : projects.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No projects available.</p>
+        <div className="bg-card rounded-lg shadow-lg overflow-hidden">
+          <div className="p-6">
+            <h2 className="text-xl font-semibold mb-4">All Projects</h2>
+            {projects.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4">Project Name</th>
+                      <th className="text-left py-3 px-4">Description</th>
+                      <th className="text-left py-3 px-4">Owner</th>
+                      <th className="text-left py-3 px-4">Members</th>
+                      <th className="text-right py-3 px-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projects.map((project) => (
+                      <tr key={project.id} className="border-b hover:bg-muted/50">
+                        <td className="py-3 px-4 font-medium">{project.name}</td>
+                        <td className="py-3 px-4 text-muted-foreground">
+                          {project.description || "No description"}
+                        </td>
+                        <td className="py-3 px-4">
+                          {project.user_id ? project.user_id.substring(0, 8) + "..." : "Unknown"}
+                        </td>
+                        <td className="py-3 px-4">
+                          {project.members ? project.members.length : 0} members
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => handleViewProject(project.id)}
+                          >
+                            View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Project Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Created At</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {projects.map((project) => (
-                      <TableRow 
-                        key={project.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => navigate(`/projects/${project.id}`)}
-                      >
-                        <TableCell className="font-medium">{project.name}</TableCell>
-                        <TableCell>{project.description || 'No description'}</TableCell>
-                        <TableCell>{project.code}</TableCell>
-                        <TableCell>{new Date(project.created_at).toLocaleDateString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="text-center py-12 border border-dashed rounded-lg">
+                <p className="text-muted-foreground mb-4">No projects found.</p>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </main>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
