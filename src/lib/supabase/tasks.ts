@@ -8,7 +8,6 @@ import { type Task } from '@/types/task';
  * @returns Array of tasks
  */
 export async function fetchTasks(userId: string) {
-  console.log("DEBUG");
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -22,7 +21,6 @@ export async function fetchTasks(userId: string) {
     }
     throw error;
   }
-  console.log("here " + data);
   // Map from database schema to our application schema
   const mappedTasks = data.map(task => ({
     id: task.id,
@@ -152,14 +150,10 @@ export async function fetchProductBacklog(projectId: string) {
     console.error('Error fetching product backlog:', error);
     if (error.code === '42P01') {
       // Table doesn't exist yet
-      console.log("DEBUG HERE no table");
       return [];
     }
     throw error;
   }
-  console.log("DEBUG HERE - Fetched data:", data);
-  console.log("Type of data:", typeof data);
-  console.log("Array length:", data?.length);
   
   // Map from database schema to our application schema
   const mappedTasks = data.map(task => ({
