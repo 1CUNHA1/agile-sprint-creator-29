@@ -1,31 +1,40 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronUp, LogOut } from "lucide-react";
+import { Plus, LogOut, Home } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { DatabaseService } from "@/services/DatabaseService";
-import { Home } from "lucide-react";
-import ProjectSelector from "@/components/ProjectSelector";
+import { supabase } from "@/lib/supabase/client";
+import { Project } from "@/types/user";
 
-const Index = () => {
+const Dashboard = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { user, logout } = useAuth();
-  const dbService = user ? new DatabaseService(user.id) : null;
   const navigate = useNavigate();
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!dbService) return;
+    const fetchProjects = async () => {
+      if (!user) return;
       
       try {
         setIsLoading(true);
+        
+        // Fetch all projects from Supabase
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*');
+          
+        if (error) throw error;
+        
+        setProjects(data as Project[] || []);
       } catch (error) {
-        console.error('Failed to load data', error);
+        console.error('Failed to load projects', error);
         toast({
           title: 'Error',
-          description: 'Failed to load your sprint data',
+          description: 'Failed to load projects',
           variant: 'destructive',
         });
       } finally {
@@ -34,7 +43,7 @@ const Index = () => {
     };
     
     if (user) {
-      loadData();
+      fetchProjects();
     }
   }, [user, toast]);
 
@@ -52,12 +61,16 @@ const Index = () => {
     }
   };
 
+  const handleViewProject = (projectId: string) => {
+    navigate(`/project/${projectId}`);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary to-background">
         <div className="text-center">
           <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mb-4 mx-auto"></div>
-          <p className="text-muted-foreground">Loading your sprint backlog...</p>
+          <p className="text-muted-foreground">Loading projects...</p>
         </div>
       </div>
     );
@@ -65,11 +78,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary to-background p-8">
-      <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
-      <header className="text-center space-y-4 relative">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-left">Your Projects</h1>
-          <div className="flex space-x-2 ml-auto">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <header className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Projects Dashboard</h1>
+          <div className="flex space-x-2">
             <Button variant="outline" onClick={() => navigate('/')}>
               <Home className="h-4 w-4 mr-2" />
               Home
@@ -83,15 +95,60 @@ const Index = () => {
               Logout
             </Button>
           </div>
+        </header>
+
+        <div className="bg-card rounded-lg shadow-lg overflow-hidden">
+          <div className="p-6">
+            <h2 className="text-xl font-semibold mb-4">All Projects</h2>
+            {projects.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4">Project Name</th>
+                      <th className="text-left py-3 px-4">Description</th>
+                      <th className="text-left py-3 px-4">Owner</th>
+                      <th className="text-left py-3 px-4">Members</th>
+                      <th className="text-right py-3 px-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projects.map((project) => (
+                      <tr key={project.id} className="border-b hover:bg-muted/50">
+                        <td className="py-3 px-4 font-medium">{project.name}</td>
+                        <td className="py-3 px-4 text-muted-foreground">
+                          {project.description || "No description"}
+                        </td>
+                        <td className="py-3 px-4">
+                          {project.user_id ? project.user_id.substring(0, 8) + "..." : "Unknown"}
+                        </td>
+                        <td className="py-3 px-4">
+                          {project.members ? project.members.length : 0} members
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => handleViewProject(project.id)}
+                          >
+                            View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12 border border-dashed rounded-lg">
+                <p className="text-muted-foreground mb-4">No projects found.</p>
+              </div>
+            )}
+          </div>
         </div>
-      </header>
-
-      <ProjectSelector />
-
-        
       </div>
     </div>
   );
 };
 
-export default Index;
+export default Dashboard;

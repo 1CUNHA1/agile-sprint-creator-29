@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Check } from "lucide-react";
 import { Sprint } from "@/types/sprint";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 interface CreateTaskDialogProps {
   open: boolean;
