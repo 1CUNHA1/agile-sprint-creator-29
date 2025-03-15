@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,10 @@ import { Task } from "@/types/task";
 import { User } from "@/types/user";
 import { Avatar } from "@/components/ui/avatar";
 import { Check } from "lucide-react";
+import { fetchProjectMembers } from "@/lib/supabase/tasks";
+import { useToast } from "@/hooks/use-toast";
 
+// Temporary mock data, will be replaced with real data from Supabase
 const MOCK_USERS: User[] = [
   { id: "1", name: "John Doe", email: "john.doe@example.com", avatarUrl: "https://github.com/shadcn.png" },
   { id: "2", name: "Jane Smith", email: "jane.smith@example.com", avatarUrl: "https://github.com/shadcn.png" },
@@ -30,6 +33,29 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
   const [priority, setPriority] = useState("medium");
   const [points, setPoints] = useState("1");
   const [assignees, setAssignees] = useState<string[]>([]);
+  const [projectMembers, setProjectMembers] = useState<string[]>([]);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Fetch project members when dialog opens
+    if (open && projectId) {
+      const getProjectMembers = async () => {
+        try {
+          const members = await fetchProjectMembers(projectId);
+          setProjectMembers(members);
+        } catch (error) {
+          console.error("Failed to fetch project members:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load project members",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      getProjectMembers();
+    }
+  }, [open, projectId, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +93,9 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
     );
   };
 
+  // Filter MOCK_USERS to only show project members
+  const filteredUsers = MOCK_USERS.filter(user => projectMembers.includes(user.id));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -96,23 +125,27 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
           <div className="space-y-2">
             <Label>Assignees</Label>
             <div className="flex flex-wrap gap-2">
-              {MOCK_USERS.map((user) => (
-                <Button
-                  key={user.id}
-                  type="button"
-                  variant={assignees.includes(user.id) ? "default" : "outline"}
-                  className="flex items-center gap-2"
-                  onClick={() => toggleAssignee(user.id)}
-                >
-                  <Avatar className="w-6 h-6">
-                    <img src={user.avatarUrl} alt={user.name} />
-                  </Avatar>
-                  {user.name}
-                  {assignees.includes(user.id) && (
-                    <Check className="w-4 h-4" />
-                  )}
-                </Button>
-              ))}
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <Button
+                    key={user.id}
+                    type="button"
+                    variant={assignees.includes(user.id) ? "default" : "outline"}
+                    className="flex items-center gap-2"
+                    onClick={() => toggleAssignee(user.id)}
+                  >
+                    <Avatar className="w-6 h-6">
+                      <img src={user.avatarUrl} alt={user.name} />
+                    </Avatar>
+                    {user.name}
+                    {assignees.includes(user.id) && (
+                      <Check className="w-4 h-4" />
+                    )}
+                  </Button>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No project members available</p>
+              )}
             </div>
           </div>
           <div className="space-y-2">

@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Project } from "@/types/user";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchProjects, createProject, joinProject } from "@/lib/supabase";
+import { fetchProjects, createProject, joinProject } from "@/lib/supabase/projects";
 import { AlertCircle, Plus, Users, Home, LogOut } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 

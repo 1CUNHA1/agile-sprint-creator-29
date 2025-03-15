@@ -9,7 +9,10 @@ import { Task } from "@/types/task";
 import { User } from "@/types/user";
 import { Avatar } from "@/components/ui/avatar";
 import { Check } from "lucide-react";
+import { fetchProjectMembers } from "@/lib/supabase/tasks";
+import { useToast } from "@/hooks/use-toast";
 
+// Temporary mock data, will be replaced with real data from Supabase
 const MOCK_USERS: User[] = [
   { id: "1", name: "John Doe", email: "john.doe@example.com", avatarUrl: "https://github.com/shadcn.png" },
   { id: "2", name: "Jane Smith", email: "jane.smith@example.com", avatarUrl: "https://github.com/shadcn.png" },
@@ -31,6 +34,8 @@ const EditTaskDialog = ({ task, open, onOpenChange, userId, onTaskUpdated }: Edi
   const [points, setPoints] = useState(task.points.toString());
   const [status, setStatus] = useState(task.status);
   const [assignees, setAssignees] = useState(task.assignees);
+  const [projectMembers, setProjectMembers] = useState<string[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     setTitle(task.title);
@@ -40,6 +45,27 @@ const EditTaskDialog = ({ task, open, onOpenChange, userId, onTaskUpdated }: Edi
     setStatus(task.status);
     setAssignees(task.assignees);
   }, [task]);
+
+  useEffect(() => {
+    // Fetch project members when dialog opens
+    if (open && task.projectId) {
+      const getProjectMembers = async () => {
+        try {
+          const members = await fetchProjectMembers(task.projectId!);
+          setProjectMembers(members);
+        } catch (error) {
+          console.error("Failed to fetch project members:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load project members",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      getProjectMembers();
+    }
+  }, [open, task.projectId, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +92,9 @@ const EditTaskDialog = ({ task, open, onOpenChange, userId, onTaskUpdated }: Edi
         : [...prev, userId]
     );
   };
+
+  // Filter MOCK_USERS to only show project members
+  const filteredUsers = MOCK_USERS.filter(user => projectMembers.includes(user.id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -96,23 +125,27 @@ const EditTaskDialog = ({ task, open, onOpenChange, userId, onTaskUpdated }: Edi
           <div className="space-y-2">
             <Label>Assignees</Label>
             <div className="flex flex-wrap gap-2">
-              {MOCK_USERS.map((user) => (
-                <Button
-                  key={user.id}
-                  type="button"
-                  variant={assignees.includes(user.id) ? "default" : "outline"}
-                  className="flex items-center gap-2"
-                  onClick={() => toggleAssignee(user.id)}
-                >
-                  <Avatar className="w-6 h-6">
-                    <img src={user.avatarUrl} alt={user.name} />
-                  </Avatar>
-                  {user.name}
-                  {assignees.includes(user.id) && (
-                    <Check className="w-4 h-4" />
-                  )}
-                </Button>
-              ))}
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <Button
+                    key={user.id}
+                    type="button"
+                    variant={assignees.includes(user.id) ? "default" : "outline"}
+                    className="flex items-center gap-2"
+                    onClick={() => toggleAssignee(user.id)}
+                  >
+                    <Avatar className="w-6 h-6">
+                      <img src={user.avatarUrl} alt={user.name} />
+                    </Avatar>
+                    {user.name}
+                    {assignees.includes(user.id) && (
+                      <Check className="w-4 h-4" />
+                    )}
+                  </Button>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No project members available</p>
+              )}
             </div>
           </div>
           <div className="space-y-2">

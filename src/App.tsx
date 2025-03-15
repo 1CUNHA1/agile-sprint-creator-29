@@ -12,7 +12,7 @@ import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
 import ProjectPage from "./pages/ProjectPage";
-import SprintBoard from "./components/SprintBoard";
+import SprintPage from "./pages/SprintPage";
 
 const queryClient = new QueryClient();
 
@@ -47,12 +47,12 @@ const App = () => (
               }
             />
             
-            {/* Sprint board */}
+            {/* Sprint page */}
             <Route
               path="/sprint/:sprintId"
               element={
                 <ProtectedRoute>
-                  <SprintBoard />
+                  <SprintPage />
                 </ProtectedRoute>
               }
             />

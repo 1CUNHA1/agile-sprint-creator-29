@@ -26,9 +26,9 @@ export async function fetchSprints(userId: string) {
   const mappedSprints = data.map(sprint => ({
     id: sprint.id,
     name: sprint.name,
-    startDate: sprint.start_date || '',
-    endDate: sprint.end_date || '',
-    tasks: sprint.tasks || [],
+    startDate: sprint.start_date || new Date().toISOString(),
+    endDate: sprint.end_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // Default to 2 weeks later
+    tasks: [],
     projectId: sprint.project_id
   }));
   
@@ -37,17 +37,17 @@ export async function fetchSprints(userId: string) {
 
 /**
  * Creates a new sprint
- * @param sprint - The sprint data with user_id
+ * @param sprint - The sprint data
  * @returns The created sprint
  */
-export async function createSprint(sprint: Omit<Sprint, 'id'> & { user_id: string }) {
+export async function createSprint(sprint: Omit<Sprint, 'id'> & { userId: string }) {
   // Map from our application schema to database schema
   const dbSprint = {
     name: sprint.name,
+    description: '',
     start_date: sprint.startDate,
     end_date: sprint.endDate,
-    tasks: sprint.tasks,
-    user_id: sprint.user_id,
+    user_id: sprint.userId,
     project_id: sprint.projectId
   };
   
@@ -66,27 +66,25 @@ export async function createSprint(sprint: Omit<Sprint, 'id'> & { user_id: strin
   return {
     id: data.id,
     name: data.name,
-    startDate: data.start_date || '',
-    endDate: data.end_date || '',
-    tasks: data.tasks || [],
+    startDate: data.start_date || new Date().toISOString(),
+    endDate: data.end_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    tasks: [],
     projectId: data.project_id
   } as Sprint;
 }
 
 /**
  * Updates an existing sprint
- * @param sprint - The sprint data with user_id
+ * @param sprint - The sprint data
  * @returns boolean indicating success
  */
-export async function updateSprint(sprint: Sprint & { user_id: string }) {
+export async function updateSprint(sprint: Sprint & { userId: string }) {
   // Map from our application schema to database schema
   const dbSprint = {
-    id: sprint.id,
     name: sprint.name,
     start_date: sprint.startDate,
     end_date: sprint.endDate,
-    tasks: sprint.tasks,
-    user_id: sprint.user_id,
+    user_id: sprint.userId,
     project_id: sprint.projectId
   };
   
@@ -120,4 +118,37 @@ export async function deleteSprint(id: string) {
   }
   
   return true;
+}
+
+/**
+ * Fetches sprints for a specific project
+ * @param projectId - The project's ID
+ * @returns Array of sprints
+ */
+export async function fetchProjectSprints(projectId: string) {
+  const { data, error } = await supabase
+    .from('sprints')
+    .select('*')
+    .eq('project_id', projectId);
+  
+  if (error) {
+    console.error('Error fetching project sprints:', error);
+    if (error.code === '42P01') {
+      // Table doesn't exist yet
+      return [];
+    }
+    throw error;
+  }
+  
+  // Map from database schema to our application schema
+  const mappedSprints = data.map(sprint => ({
+    id: sprint.id,
+    name: sprint.name,
+    startDate: sprint.start_date || new Date().toISOString(),
+    endDate: sprint.end_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    tasks: [],
+    projectId: sprint.project_id
+  }));
+  
+  return mappedSprints as Sprint[];
 }
