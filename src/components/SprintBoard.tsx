@@ -16,6 +16,7 @@ const SprintBoard = () => {
   const { toast } = useToast();
   const [sprint, setSprint] = useState<Sprint | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadSprint = async () => {
@@ -24,7 +25,7 @@ const SprintBoard = () => {
       try {
         setLoading(true);
         // Fetch all sprints and find the one matching the ID
-        const sprints = await fetchSprints();
+        const sprints = await fetchSprints(user?.id || "");
         const foundSprint = sprints.find(s => s.id === sprintId);
         
         if (foundSprint) {
@@ -49,7 +50,7 @@ const SprintBoard = () => {
     };
 
     loadSprint();
-  }, [sprintId]);
+  }, [sprintId, user]);
 
   const calculateProgress = () => {
     if (!sprint) return 0;

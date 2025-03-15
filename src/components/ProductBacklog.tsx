@@ -167,12 +167,15 @@ const ProductBacklog = ({ projectId, onRefresh }: ProductBacklogProps) => {
       </CardContent>
 
       {/* Create Task Dialog */}
-      <CreateTaskDialog
-        open={showCreateTaskDialog}
-        onClose={() => setShowCreateTaskDialog(false)}
-        onCreateTask={handleCreateTask}
-        projectId={projectId}
-      />
+      {user && (
+        <CreateTaskDialog
+          open={showCreateTaskDialog}
+          onOpenChange={setShowCreateTaskDialog}
+          onTaskCreated={handleCreateTask}
+          projectId={projectId}
+          userId={user.id}
+        />
+      )}
     </Card>
   );
 };

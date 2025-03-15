@@ -134,14 +134,14 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     if (!task || !user) return;
     
     // Determine which column the task was dropped into based on DOM structure
-    // instead of using over.node which doesn't exist in the type
     const columns = document.querySelectorAll('.kanban-column');
     let newStatus = task.status;
     
     // Find the column containing the drop target
-    const overElement = over.id as HTMLElement;
+    // Fixed: Properly handle UniqueIdentifier without direct conversion to HTMLElement
     columns.forEach((column, index) => {
-      if (column.contains(document.getElementById(overElement.toString()) as Node)) {
+      const columnId = `column-${index}`;
+      if (over.id === columnId) {
         switch (index) {
           case 0: newStatus = "todo"; break;
           case 1: newStatus = "in-progress"; break;
@@ -154,7 +154,13 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     if (newStatus === task.status) return;
     
     try {
-      const updatedTask = { ...task, status: newStatus };
+      // Fixed: Add user_id to the task object when updating
+      const updatedTask = { 
+        ...task, 
+        status: newStatus,
+        user_id: user.id 
+      };
+      
       await updateTask(updatedTask);
       
       setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
@@ -192,7 +198,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
       
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="flex gap-4 overflow-x-auto pb-4">
-          <div className="kanban-column">
+          <div className="kanban-column" id="column-0">
             <KanbanColumn 
               title="To Do" 
               tasks={todoTasks} 
@@ -200,7 +206,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
               onDelete={handleDeleteTask} 
             />
           </div>
-          <div className="kanban-column">
+          <div className="kanban-column" id="column-1">
             <KanbanColumn 
               title="In Progress" 
               tasks={inProgressTasks} 
@@ -208,7 +214,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
               onDelete={handleDeleteTask} 
             />
           </div>
-          <div className="kanban-column">
+          <div className="kanban-column" id="column-2">
             <KanbanColumn 
               title="In Review" 
               tasks={inReviewTasks} 
@@ -216,7 +222,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
               onDelete={handleDeleteTask} 
             />
           </div>
-          <div className="kanban-column">
+          <div className="kanban-column" id="column-3">
             <KanbanColumn 
               title="Done" 
               tasks={doneTasks} 
@@ -229,9 +235,9 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
 
       {user && selectedTask && (
         <EditTaskDialog
+          task={selectedTask}
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
-          task={selectedTask}
           userId={user.id}
           onTaskUpdated={onTaskUpdated}
         />

@@ -197,12 +197,12 @@ const SprintTask = ({ task, sprints, onDelete, onUpdate, onMove, onMoveToBacklog
       <EditTaskDialog
         task={task}
         open={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
-        onUpdateTask={onUpdate}
+        onOpenChange={setIsEditDialogOpen}
+        userId={task.userId || ""}
+        onTaskUpdated={onUpdate}
       />
     </>
   );
 };
 
 export default SprintTask;
-
