@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import {
   DragEndEvent, 
   closestCenter, 
   DragStartEvent, 
+  DragOverEvent,
   DragOverlay, 
   useSensor, 
   useSensors, 
@@ -81,10 +83,12 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [currentOverId, setCurrentOverId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
+      activationConstraint: { distance: 8 }, // Slightly increased for better response
     })
   );
 
@@ -130,12 +134,23 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
   const handleDragStart = (event: DragStartEvent) => {
     const taskId = event.active.id as string;
     const foundTask = tasks.find(t => t.id === taskId);
+    setActiveId(taskId);
     if (foundTask) setActiveTask(foundTask);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    // Update current column being dragged over for visual feedback if needed
+    if (over) {
+      setCurrentOverId(over.id as string);
+    }
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTask(null);
+    setActiveId(null);
+    setCurrentOverId(null);
 
     if (!over) return;
 
@@ -150,19 +165,36 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
       "column-done": "done",
     };
 
-    const newStatus = newStatusMap[over.id as string] || task.status;
-    if (newStatus === task.status) return;
+    const newStatus = newStatusMap[over.id as string];
+    if (!newStatus || newStatus === task.status) return;
+
+    console.log(`Moving task ${taskId} from ${task.status} to ${newStatus}`);
 
     try {
-      const updatedTask = { ...task, status: newStatus };
-      await updateTask(updatedTask);
+      // Optimistically update UI first
       setTasks(prevTasks =>
         prevTasks.map(t => (t.id === taskId ? { ...t, status: newStatus } : t))
       );
-      toast({ title: "Task updated", description: `Task moved to ${newStatus.replace("-", " ")}` });
+      
+      // Then update the database
+      const updatedTask = { ...task, status: newStatus, user_id: user.id };
+      await updateTask(updatedTask);
+      
+      toast({ 
+        title: "Task updated", 
+        description: `Task moved to ${newStatus.replace("-", " ")}` 
+      });
     } catch (error) {
       console.error("Failed to update task status:", error);
-      toast({ title: "Error", description: "Failed to update task status", variant: "destructive" });
+      // Revert the optimistic update on failure
+      setTasks(prevTasks =>
+        prevTasks.map(t => (t.id === taskId ? { ...task } : t))
+      );
+      toast({ 
+        title: "Error", 
+        description: "Failed to update task status", 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -179,6 +211,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
       <DndContext 
         collisionDetection={closestCenter} 
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         sensors={sensors}
       >
@@ -193,6 +226,21 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
           {activeTask && <TaskCard task={activeTask} onEdit={() => {}} onDelete={() => {}} isDraggable />}
         </DragOverlay>
       </DndContext>
+
+      {selectedTask && (
+        <EditTaskDialog
+          task={selectedTask}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          userId={user?.id || ""}
+          onTaskUpdated={(updatedTask) => {
+            setTasks(prevTasks =>
+              prevTasks.map(task => (task.id === updatedTask.id ? updatedTask : task))
+            );
+            setIsEditDialogOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };
