@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -17,7 +16,7 @@ import {
   useSensor, 
   useSensors, 
   PointerSensor,
-  DragOverEvent 
+  useDroppable 
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
@@ -35,15 +34,15 @@ interface KanbanBoardProps {
   sprintId: string;
 }
 
-// Sortable task wrapper
+// Sortable Task Wrapper
 const SortableTaskCard = ({ task, onEdit, onDelete }: { task: Task; onEdit: (task: Task) => void; onDelete: (taskId: string) => void }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
-  
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
-  
+
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <TaskCard task={task} onEdit={onEdit} onDelete={onDelete} isDraggable={true} />
@@ -51,10 +50,12 @@ const SortableTaskCard = ({ task, onEdit, onDelete }: { task: Task; onEdit: (tas
   );
 };
 
-// Individual Kanban column
+// Kanban Column with Droppable Support
 const KanbanColumn = ({ title, tasks, onEdit, onDelete, columnId }: KanbanColumnProps) => {
+  const { setNodeRef } = useDroppable({ id: columnId });
+
   return (
-    <Card className="flex-1 min-w-[250px] max-w-[350px] bg-secondary/30" id={columnId}>
+    <Card ref={setNodeRef} className="flex-1 min-w-[250px] max-w-[350px] bg-secondary/30" id={columnId}>
       <CardHeader className="bg-muted/30 pb-2">
         <CardTitle className="text-md font-medium">{title} ({tasks.length})</CardTitle>
       </CardHeader>
@@ -71,7 +72,7 @@ const KanbanColumn = ({ title, tasks, onEdit, onDelete, columnId }: KanbanColumn
   );
 };
 
-// Main Kanban Board
+// Main Kanban Board Component
 const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -80,16 +81,18 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const [activeDroppableContainer, setActiveDroppableContainer] = useState<string | null>(null);
 
-  // Configure sensors for better drag detection
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5, // 5px movement required before drag starts
-      },
+      activationConstraint: { distance: 5 },
     })
   );
+
+  useEffect(() => {
+    if (sprintId) {
+      fetchTasks();
+    }
+  }, [sprintId]);
 
   const fetchTasks = async () => {
     try {
@@ -108,12 +111,6 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     }
   };
 
-  useEffect(() => {
-    if (sprintId) {
-      fetchTasks();
-    }
-  }, [sprintId]);
-
   const handleEditTask = (task: Task) => {
     setSelectedTask(task);
     setIsEditDialogOpen(true);
@@ -123,182 +120,79 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     try {
       await deleteTask(taskId);
       setTasks(tasks.filter(task => task.id !== taskId));
-      toast({
-        title: "Task deleted",
-        description: "Task has been deleted successfully",
-      });
+      toast({ title: "Task deleted", description: "Task has been deleted successfully" });
     } catch (error) {
       console.error("Failed to delete task:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete task",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to delete task", variant: "destructive" });
     }
-  };
-
-  const onTaskUpdated = (updatedTask: Task) => {
-    setTasks(tasks.map(task => task.id === updatedTask.id ? updatedTask : task));
-    setIsEditDialogOpen(false);
-    setSelectedTask(null);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const taskId = active.id as string;
+    const taskId = event.active.id as string;
     const foundTask = tasks.find(t => t.id === taskId);
-    if (foundTask) {
-      setActiveTask(foundTask);
-    }
-  };
-
-  const handleDragOver = (event: DragOverEvent) => {
-    const { over } = event;
-    if (over) {
-      const overId = String(over.id);
-      // Check if the droppable container changed
-      if (overId.startsWith('column-') && overId !== activeDroppableContainer) {
-        setActiveDroppableContainer(overId);
-        console.log("Dragging over:", overId);
-      }
-    }
+    if (foundTask) setActiveTask(foundTask);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTask(null);
-    setActiveDroppableContainer(null);
-    
-    if (!over) {
-      return;
-    }
 
-    // Explicitly get overId as string to make typescript happy
-    const overId = String(over.id);
-    
-    // If not dropping over a column, return
-    if (!overId.startsWith('column-')) {
-      return;
-    }
-    
+    if (!over) return;
+
     const taskId = active.id as string;
     const task = tasks.find(t => t.id === taskId);
-    
     if (!task || !user) return;
-    
-    // Determine new status based on column id
-    let newStatus = task.status;
-    
-    if (overId === 'column-todo') newStatus = 'todo';
-    else if (overId === 'column-in-progress') newStatus = 'in-progress';
-    else if (overId === 'column-in-review') newStatus = 'in-review';
-    else if (overId === 'column-done') newStatus = 'done';
-    
-    // If status hasn't changed, no need to update
+
+    const newStatusMap: Record<string, string> = {
+      "column-todo": "todo",
+      "column-in-progress": "in-progress",
+      "column-in-review": "in-review",
+      "column-done": "done",
+    };
+
+    const newStatus = newStatusMap[over.id as string] || task.status;
     if (newStatus === task.status) return;
-    
+
     try {
-      const updatedTask = { 
-        ...task, 
-        status: newStatus,
-        user_id: user.id 
-      };
-      
-      console.log("Updating task:", updatedTask);
+      const updatedTask = { ...task, status: newStatus };
       await updateTask(updatedTask);
-      
-      setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-      
-      toast({
-        title: "Task updated",
-        description: `Task moved to ${newStatus.replace("-", " ")}`,
-      });
+      setTasks(prevTasks =>
+        prevTasks.map(t => (t.id === taskId ? { ...t, status: newStatus } : t))
+      );
+      toast({ title: "Task updated", description: `Task moved to ${newStatus.replace("-", " ")}` });
     } catch (error) {
       console.error("Failed to update task status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update task status",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update task status", variant: "destructive" });
     }
   };
 
-  const todoTasks = tasks.filter(task => task.status === "todo");
-  const inProgressTasks = tasks.filter(task => task.status === "in-progress");
-  const inReviewTasks = tasks.filter(task => task.status === "in-review");
-  const doneTasks = tasks.filter(task => task.status === "done");
-
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-[60vh]">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    );
+    return <div className="flex justify-center items-center h-[60vh]">
+      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+    </div>;
   }
 
   return (
     <div className="h-full">
       <h2 className="text-xl font-semibold mb-4">Sprint Board</h2>
-      
+
       <DndContext 
         collisionDetection={closestCenter} 
         onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         sensors={sensors}
       >
         <div className="flex gap-4 overflow-x-auto pb-4">
-          <KanbanColumn 
-            title="To Do" 
-            tasks={todoTasks} 
-            onEdit={handleEditTask} 
-            onDelete={handleDeleteTask}
-            columnId="column-todo"
-          />
-          <KanbanColumn 
-            title="In Progress" 
-            tasks={inProgressTasks} 
-            onEdit={handleEditTask} 
-            onDelete={handleDeleteTask}
-            columnId="column-in-progress"
-          />
-          <KanbanColumn 
-            title="In Review" 
-            tasks={inReviewTasks} 
-            onEdit={handleEditTask} 
-            onDelete={handleDeleteTask}
-            columnId="column-in-review"
-          />
-          <KanbanColumn 
-            title="Done" 
-            tasks={doneTasks} 
-            onEdit={handleEditTask} 
-            onDelete={handleDeleteTask}
-            columnId="column-done"
-          />
+          <KanbanColumn title="To Do" tasks={tasks.filter(t => t.status === "todo")} onEdit={handleEditTask} onDelete={handleDeleteTask} columnId="column-todo" />
+          <KanbanColumn title="In Progress" tasks={tasks.filter(t => t.status === "in-progress")} onEdit={handleEditTask} onDelete={handleDeleteTask} columnId="column-in-progress" />
+          <KanbanColumn title="In Review" tasks={tasks.filter(t => t.status === "in-review")} onEdit={handleEditTask} onDelete={handleDeleteTask} columnId="column-in-review" />
+          <KanbanColumn title="Done" tasks={tasks.filter(t => t.status === "done")} onEdit={handleEditTask} onDelete={handleDeleteTask} columnId="column-done" />
         </div>
 
         <DragOverlay>
-          {activeTask ? (
-            <TaskCard 
-              task={activeTask} 
-              onEdit={() => {}} 
-              onDelete={() => {}} 
-              isDraggable={true}
-            />
-          ) : null}
+          {activeTask && <TaskCard task={activeTask} onEdit={() => {}} onDelete={() => {}} isDraggable />}
         </DragOverlay>
       </DndContext>
-
-      {user && selectedTask && (
-        <EditTaskDialog
-          task={selectedTask}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          userId={user.id}
-          onTaskUpdated={onTaskUpdated}
-        />
-      )}
     </div>
   );
 };
