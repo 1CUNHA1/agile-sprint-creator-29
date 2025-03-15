@@ -52,6 +52,7 @@ export async function createTask(task: Omit<Task, 'id'> & { user_id: string }) {
     status: task.status,
     priority: task.priority,
     estimate: task.points,
+    assignee_ids: task.assignees, // Store assignees in the database
     user_id: task.user_id,
     sprint_id: task.sprintId,
     created_at: new Date().toISOString(),
@@ -208,4 +209,24 @@ export async function fetchSprintTasks(sprintId: string) {
   }));
   
   return mappedTasks as Task[];
+}
+
+/**
+ * Fetches project members for task assignment
+ * @param projectId - The project's ID
+ * @returns Array of user IDs belonging to the project
+ */
+export async function fetchProjectMembers(projectId: string) {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('members')
+    .eq('id', projectId)
+    .single();
+  
+  if (error) {
+    console.error('Error fetching project members:', error);
+    throw error;
+  }
+  
+  return data.members || [];
 }
