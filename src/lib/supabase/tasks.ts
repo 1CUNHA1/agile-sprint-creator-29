@@ -8,6 +8,7 @@ import { type Task } from '@/types/task';
  * @returns Array of tasks
  */
 export async function fetchTasks(userId: string) {
+  console.log("DEBUG");
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -21,7 +22,7 @@ export async function fetchTasks(userId: string) {
     }
     throw error;
   }
-  
+  console.log("here " + data);
   // Map from database schema to our application schema
   const mappedTasks = data.map(task => ({
     id: task.id,
@@ -52,7 +53,7 @@ export async function createTask(task: Omit<Task, 'id'> & { user_id: string }) {
     status: task.status,
     priority: task.priority,
     estimate: task.points,
-    assignee_ids: task.assignees, // Store assignees in the database
+    assignee_ids: task.assignees? task.assignees: [], // Store assignees in the database
     user_id: task.user_id,
     sprint_id: task.sprintId,
     created_at: new Date().toISOString(),
@@ -142,20 +143,23 @@ export async function deleteTask(id: string) {
  * @returns Array of tasks
  */
 export async function fetchProductBacklog(projectId: string) {
+  console.log("Fetching tasks for project ID:", projectId);
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
-    .eq('project_id', projectId)
-    .is('sprint_id', null);
-  
+    .eq('project_id', projectId);
   if (error) {
     console.error('Error fetching product backlog:', error);
     if (error.code === '42P01') {
       // Table doesn't exist yet
+      console.log("DEBUG HERE no table");
       return [];
     }
     throw error;
   }
+  console.log("DEBUG HERE - Fetched data:", data);
+  console.log("Type of data:", typeof data);
+  console.log("Array length:", data?.length);
   
   // Map from database schema to our application schema
   const mappedTasks = data.map(task => ({

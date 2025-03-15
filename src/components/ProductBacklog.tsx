@@ -32,7 +32,7 @@ const ProductBacklog = ({ projectId, onRefresh }: ProductBacklogProps) => {
     
     try {
       setIsLoading(true);
-      const backlogTasks = await fetchProductBacklog(user.id);
+      const backlogTasks = await fetchProductBacklog(projectId);
       // Filter for tasks associated with current project
       const projectTasks = backlogTasks.filter(task => task.projectId === projectId);
       setTasks(projectTasks);
