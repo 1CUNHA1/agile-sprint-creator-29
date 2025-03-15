@@ -8,7 +8,17 @@ import { fetchSprintTasks, updateTask, deleteTask } from "@/lib/supabase/tasks";
 import TaskCard from "@/components/TaskCard";
 import { useToast } from "@/hooks/use-toast";
 import EditTaskDialog from "@/components/EditTaskDialog";
-import { DndContext, DragEndEvent, closestCenter, DragStartEvent, DragOverlay, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
+import { 
+  DndContext, 
+  DragEndEvent, 
+  closestCenter, 
+  DragStartEvent, 
+  DragOverlay, 
+  useSensor, 
+  useSensors, 
+  PointerSensor,
+  DragOverEvent 
+} from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -70,6 +80,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [activeDroppableContainer, setActiveDroppableContainer] = useState<string | null>(null);
 
   // Configure sensors for better drag detection
   const sensors = useSensors(
@@ -141,26 +152,47 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     }
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    if (over) {
+      const overId = String(over.id);
+      // Check if the droppable container changed
+      if (overId.startsWith('column-') && overId !== activeDroppableContainer) {
+        setActiveDroppableContainer(overId);
+        console.log("Dragging over:", overId);
+      }
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTask(null);
+    setActiveDroppableContainer(null);
     
     if (!over) {
       return;
     }
 
+    // Explicitly get overId as string to make typescript happy
+    const overId = String(over.id);
+    
+    // If not dropping over a column, return
+    if (!overId.startsWith('column-')) {
+      return;
+    }
+    
     const taskId = active.id as string;
     const task = tasks.find(t => t.id === taskId);
     
     if (!task || !user) return;
     
-    // Check if dropped over a column
+    // Determine new status based on column id
     let newStatus = task.status;
     
-    if (over.id === 'column-todo') newStatus = 'todo';
-    else if (over.id === 'column-in-progress') newStatus = 'in-progress';
-    else if (over.id === 'column-in-review') newStatus = 'in-review';
-    else if (over.id === 'column-done') newStatus = 'done';
+    if (overId === 'column-todo') newStatus = 'todo';
+    else if (overId === 'column-in-progress') newStatus = 'in-progress';
+    else if (overId === 'column-in-review') newStatus = 'in-review';
+    else if (overId === 'column-done') newStatus = 'done';
     
     // If status hasn't changed, no need to update
     if (newStatus === task.status) return;
@@ -172,6 +204,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
         user_id: user.id 
       };
       
+      console.log("Updating task:", updatedTask);
       await updateTask(updatedTask);
       
       setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
@@ -210,6 +243,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
       <DndContext 
         collisionDetection={closestCenter} 
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         sensors={sensors}
       >
