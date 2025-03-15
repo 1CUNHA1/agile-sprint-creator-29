@@ -28,6 +28,23 @@ const statusColors = {
 };
 
 const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false, isDraggable = false }: TaskCardProps) => {
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent drag when clicking edit button
+    onEdit(task);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent drag when clicking delete button
+    onDelete(task.id);
+  };
+
+  const handleMoveClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent drag when clicking move button
+    if (onMove) {
+      onMove(task);
+    }
+  };
+
   return (
     <Card className={`mb-4 ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''} hover:shadow-md transition-shadow`}>
       <CardHeader className="pb-2">
@@ -53,7 +70,7 @@ const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false, isDr
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => onEdit(task)}
+          onClick={handleEditClick}
         >
           <Edit size={16} />
         </Button>
@@ -61,7 +78,7 @@ const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false, isDr
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => onMove(task)}
+            onClick={handleMoveClick}
             className="text-blue-500 hover:text-blue-700"
           >
             <ArrowRight size={16} />
@@ -70,7 +87,7 @@ const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false, isDr
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => onDelete(task.id)}
+          onClick={handleDeleteClick}
           className="text-red-500 hover:text-red-700"
         >
           <Trash2 size={16} />

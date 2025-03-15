@@ -8,7 +8,7 @@ import { fetchSprintTasks, updateTask, deleteTask } from "@/lib/supabase/tasks";
 import TaskCard from "@/components/TaskCard";
 import { useToast } from "@/hooks/use-toast";
 import EditTaskDialog from "@/components/EditTaskDialog";
-import { DndContext, DragEndEvent, closestCenter, DragStartEvent, DragOverlay } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, closestCenter, DragStartEvent, DragOverlay, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -70,6 +70,15 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  // Configure sensors for better drag detection
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // 5px movement required before drag starts
+      },
+    })
+  );
 
   const fetchTasks = async () => {
     try {
@@ -136,7 +145,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     const { active, over } = event;
     setActiveTask(null);
     
-    if (!over || active.id === over.id) {
+    if (!over) {
       return;
     }
 
@@ -145,14 +154,15 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     
     if (!task || !user) return;
     
+    // Check if dropped over a column
     let newStatus = task.status;
     
-    // Check if dropped over a column
     if (over.id === 'column-todo') newStatus = 'todo';
     else if (over.id === 'column-in-progress') newStatus = 'in-progress';
     else if (over.id === 'column-in-review') newStatus = 'in-review';
     else if (over.id === 'column-done') newStatus = 'done';
     
+    // If status hasn't changed, no need to update
     if (newStatus === task.status) return;
     
     try {
@@ -201,6 +211,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
         collisionDetection={closestCenter} 
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        sensors={sensors}
       >
         <div className="flex gap-4 overflow-x-auto pb-4">
           <KanbanColumn 
