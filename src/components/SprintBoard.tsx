@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchSprintById } from "@/lib/supabase/sprints";
+import { fetchSprints } from "@/lib/supabase/sprints";
 import { Sprint } from "@/types/sprint";
 import { useToast } from "@/hooks/use-toast";
 import KanbanBoard from "@/components/KanbanBoard";
@@ -23,8 +23,19 @@ const SprintBoard = () => {
 
       try {
         setLoading(true);
-        const sprintData = await fetchSprintById(sprintId);
-        setSprint(sprintData);
+        // Fetch all sprints and find the one matching the ID
+        const sprints = await fetchSprints();
+        const foundSprint = sprints.find(s => s.id === sprintId);
+        
+        if (foundSprint) {
+          setSprint(foundSprint);
+        } else {
+          toast({
+            title: "Error",
+            description: "Sprint not found",
+            variant: "destructive",
+          });
+        }
       } catch (error) {
         console.error("Failed to fetch sprint:", error);
         toast({

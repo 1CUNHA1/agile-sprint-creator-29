@@ -133,12 +133,15 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     
     if (!task || !user) return;
     
-    // Determine which column the task was dropped into
+    // Determine which column the task was dropped into based on DOM structure
+    // instead of using over.node which doesn't exist in the type
     const columns = document.querySelectorAll('.kanban-column');
     let newStatus = task.status;
     
+    // Find the column containing the drop target
+    const overElement = over.id as HTMLElement;
     columns.forEach((column, index) => {
-      if (column.contains(over.node as Node)) {
+      if (column.contains(document.getElementById(overElement.toString()) as Node)) {
         switch (index) {
           case 0: newStatus = "todo"; break;
           case 1: newStatus = "in-progress"; break;
@@ -151,7 +154,7 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     if (newStatus === task.status) return;
     
     try {
-      const updatedTask = { ...task, status: newStatus, user_id: user.id };
+      const updatedTask = { ...task, status: newStatus };
       await updateTask(updatedTask);
       
       setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));

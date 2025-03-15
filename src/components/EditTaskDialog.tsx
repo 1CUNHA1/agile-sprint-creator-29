@@ -19,11 +19,12 @@ const MOCK_USERS: User[] = [
 interface EditTaskDialogProps {
   task: Task;
   open: boolean;
-  onClose: () => void;
-  onUpdateTask: (task: Task) => void;
+  onOpenChange: (open: boolean) => void;
+  userId: string;
+  onTaskUpdated: (task: Task) => void;
 }
 
-const EditTaskDialog = ({ task, open, onClose, onUpdateTask }: EditTaskDialogProps) => {
+const EditTaskDialog = ({ task, open, onOpenChange, userId, onTaskUpdated }: EditTaskDialogProps) => {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description);
   const [priority, setPriority] = useState(task.priority);
@@ -51,12 +52,11 @@ const EditTaskDialog = ({ task, open, onClose, onUpdateTask }: EditTaskDialogPro
       status,
       assignees,
     };
-    onUpdateTask(updatedTask);
-    onClose();
+    onTaskUpdated(updatedTask);
   };
 
   const handleStatusChange = (value: string) => {
-    setStatus(value as "todo" | "in-progress" | "done");
+    setStatus(value as "todo" | "in-progress" | "in-review" | "done");
   };
 
   const toggleAssignee = (userId: string) => {
@@ -68,7 +68,7 @@ const EditTaskDialog = ({ task, open, onClose, onUpdateTask }: EditTaskDialogPro
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Task</DialogTitle>
@@ -137,6 +137,7 @@ const EditTaskDialog = ({ task, open, onClose, onUpdateTask }: EditTaskDialogPro
               <SelectContent>
                 <SelectItem value="todo">To Do</SelectItem>
                 <SelectItem value="in-progress">In Progress</SelectItem>
+                <SelectItem value="in-review">In Review</SelectItem>
                 <SelectItem value="done">Done</SelectItem>
               </SelectContent>
             </Select>
@@ -157,7 +158,7 @@ const EditTaskDialog = ({ task, open, onClose, onUpdateTask }: EditTaskDialogPro
             </Select>
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit">Update Task</Button>
