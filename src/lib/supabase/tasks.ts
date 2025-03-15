@@ -49,13 +49,13 @@ export async function createTask(task: Omit<Task, 'id'> & { user_id: string }) {
   const dbTask = {
     title: task.title,
     description: task.description,
+    status: task.status,
     priority: task.priority,
     estimate: task.points,
-    status: task.status,
-    assignee_ids: task.assignees,
     user_id: task.user_id,
-    project_id: task.projectId,
-    sprint_id: task.sprintId
+    sprint_id: task.sprintId,
+    created_at: new Date().toISOString(),
+    project_id: task.projectId
   };
   
   const { data, error } = await supabase
