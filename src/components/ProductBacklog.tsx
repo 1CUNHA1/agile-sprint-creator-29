@@ -3,8 +3,10 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Task } from "@/types/task";
-import { fetchProductBacklog } from "@/lib/supabase/tasks";
-import { Plus, ListChecks } from "lucide-react";
+import { Sprint } from "@/types/sprint";
+import { fetchProductBacklog, updateTask } from "@/lib/supabase/tasks";
+import { fetchProjectSprints } from "@/lib/supabase/sprints";
+import { Plus, ListChecks, Edit, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,6 +16,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import CreateTaskDialog from "./CreateTaskDialog";
+import EditTaskDialog from "./EditTaskDialog";
+import MoveTaskDialog from "./MoveTaskDialog";
 
 interface ProductBacklogProps {
   projectId: string;
@@ -22,8 +26,12 @@ interface ProductBacklogProps {
 
 const ProductBacklog = ({ projectId, onRefresh }: ProductBacklogProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateTaskDialog, setShowCreateTaskDialog] = useState(false);
+  const [showEditTaskDialog, setShowEditTaskDialog] = useState(false);
+  const [showMoveTaskDialog, setShowMoveTaskDialog] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -36,6 +44,10 @@ const ProductBacklog = ({ projectId, onRefresh }: ProductBacklogProps) => {
       // Filter for tasks associated with current project
       const projectTasks = backlogTasks.filter(task => task.projectId === projectId);
       setTasks(projectTasks);
+      
+      // Load sprints for the project
+      const projectSprints = await fetchProjectSprints(projectId);
+      setSprints(projectSprints);
     } catch (error) {
       console.error('Error loading product backlog:', error);
       toast({
@@ -78,6 +90,64 @@ const ProductBacklog = ({ projectId, onRefresh }: ProductBacklogProps) => {
       toast({
         title: 'Error',
         description: 'Failed to create task',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEditTask = (task: Task) => {
+    setSelectedTask(task);
+    setShowEditTaskDialog(true);
+  };
+
+  const handleMoveTask = (task: Task) => {
+    setSelectedTask(task);
+    setShowMoveTaskDialog(true);
+  };
+
+  const handleTaskUpdated = (updatedTask: Task) => {
+    setTasks(prev => prev.map(task => task.id === updatedTask.id ? updatedTask : task));
+    setShowEditTaskDialog(false);
+    setSelectedTask(null);
+    
+    toast({
+      title: 'Success',
+      description: 'Task updated successfully',
+    });
+  };
+
+  const handleTaskMoved = async (taskId: string, sprintId: string) => {
+    try {
+      if (!user) return;
+      
+      const taskToMove = tasks.find(task => task.id === taskId);
+      if (!taskToMove) return;
+      
+      const updatedTask = {
+        ...taskToMove,
+        sprintId,
+        user_id: user.id
+      };
+      
+      await updateTask(updatedTask);
+      
+      // Remove the task from the backlog
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+      
+      setShowMoveTaskDialog(false);
+      setSelectedTask(null);
+      
+      toast({
+        title: 'Success',
+        description: 'Task moved to sprint successfully',
+      });
+      
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      console.error('Error moving task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to move task to sprint',
         variant: 'destructive',
       });
     }
@@ -135,20 +205,16 @@ const ProductBacklog = ({ projectId, onRefresh }: ProductBacklogProps) => {
                 )}
                 <div className="flex justify-between items-center text-xs text-muted-foreground">
                   <span>{task.points} {task.points === 1 ? 'point' : 'points'}</span>
-                  {task.assignees && task.assignees.length > 0 && (
-                    <div className="flex -space-x-2">
-                      {task.assignees.slice(0, 3).map((assigneeId) => (
-                        <div key={assigneeId} className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs">
-                          {assigneeId.charAt(0).toUpperCase()}
-                        </div>
-                      ))}
-                      {task.assignees.length > 3 && (
-                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs">
-                          +{task.assignees.length - 3}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex space-x-1">
+                    <Button onClick={() => handleEditTask(task)} size="sm" variant="ghost" className="h-8 w-8 p-0">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    {sprints.length > 0 && (
+                      <Button onClick={() => handleMoveTask(task)} size="sm" variant="ghost" className="h-8 w-8 p-0 text-blue-500">
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -168,13 +234,35 @@ const ProductBacklog = ({ projectId, onRefresh }: ProductBacklogProps) => {
 
       {/* Create Task Dialog */}
       {user && (
-        <CreateTaskDialog
-          open={showCreateTaskDialog}
-          onOpenChange={setShowCreateTaskDialog}
-          onTaskCreated={handleCreateTask}
-          projectId={projectId}
-          userId={user.id}
-        />
+        <>
+          <CreateTaskDialog
+            open={showCreateTaskDialog}
+            onOpenChange={setShowCreateTaskDialog}
+            onTaskCreated={handleCreateTask}
+            projectId={projectId}
+            userId={user.id}
+          />
+          
+          {selectedTask && (
+            <>
+              <EditTaskDialog
+                open={showEditTaskDialog}
+                onOpenChange={setShowEditTaskDialog}
+                task={selectedTask}
+                userId={user.id}
+                onTaskUpdated={handleTaskUpdated}
+              />
+              
+              <MoveTaskDialog
+                open={showMoveTaskDialog}
+                onOpenChange={setShowMoveTaskDialog}
+                task={selectedTask}
+                sprints={sprints}
+                onTaskMoved={handleTaskMoved}
+              />
+            </>
+          )}
+        </>
       )}
     </Card>
   );

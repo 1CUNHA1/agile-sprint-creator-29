@@ -2,13 +2,15 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, ArrowRight } from "lucide-react";
 import { Task } from "@/types/task";
 
 interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  onMove?: (task: Task) => void;
+  showMoveButton?: boolean;
 }
 
 const priorityColors = {
@@ -24,7 +26,7 @@ const statusColors = {
   done: "bg-green-100 text-green-800",
 };
 
-const TaskCard = ({ task, onEdit, onDelete }: TaskCardProps) => {
+const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false }: TaskCardProps) => {
   return (
     <Card className="mb-4 hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
@@ -54,6 +56,16 @@ const TaskCard = ({ task, onEdit, onDelete }: TaskCardProps) => {
         >
           <Edit size={16} />
         </Button>
+        {showMoveButton && onMove && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onMove(task)}
+            className="text-blue-500 hover:text-blue-700"
+          >
+            <ArrowRight size={16} />
+          </Button>
+        )}
         <Button
           size="sm"
           variant="ghost"
