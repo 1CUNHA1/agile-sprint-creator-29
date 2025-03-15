@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Task } from "@/types/task";
-import { User } from "@/types/user";
+import { Profile } from "@/types/user";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Check, UserIcon } from "lucide-react";
 import { fetchProjectMembers } from "@/lib/supabase/tasks";
@@ -27,7 +27,6 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
   const [priority, setPriority] = useState("medium");
   const [points, setPoints] = useState("1");
   const [assignees, setAssignees] = useState<string[]>([]);
-  const [projectMembers, setProjectMembers] = useState<string[]>([]);
   const [memberProfiles, setMemberProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -48,8 +47,6 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
       
       // Fetch project members
       const members = await fetchProjectMembers(projectId);
-      console.log("DEBUG: " + members);
-      setProjectMembers(members);
       
       if (members.length > 0) {
         // Fetch member profiles
@@ -63,7 +60,9 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
         setMemberProfiles(profiles.map(profile => ({
           id: profile.id,
           name: profile.name || 'Unknown User',
-          avatarUrl: profile.avatar_url || ''
+          avatar_url: profile.avatar_url || '',
+          created_at: '',
+          updated_at: ''
         })));
       }
     } catch (error) {
@@ -157,7 +156,7 @@ const CreateTaskDialog = ({ open, onOpenChange, userId, projectId, onTaskCreated
                     onClick={() => toggleAssignee(user.id)}
                   >
                     <Avatar className="w-6 h-6">
-                      <AvatarImage src={user.avatarUrl} alt={user.name} />
+                      <AvatarImage src={user.avatar_url} alt={user.name} />
                       <AvatarFallback>
                         <UserIcon className="w-4 h-4" />
                       </AvatarFallback>
