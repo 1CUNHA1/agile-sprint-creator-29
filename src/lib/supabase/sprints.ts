@@ -1,4 +1,3 @@
-
 import { supabase } from './client';
 import { type Sprint } from '@/types/sprint';
 
@@ -44,7 +43,6 @@ export async function createSprint(sprint: Omit<Sprint, 'id'> & { userId: string
   // Map from our application schema to database schema
   const dbSprint = {
     name: sprint.name,
-    description: '',
     start_date: sprint.startDate,
     end_date: sprint.endDate,
     user_id: sprint.userId,
