@@ -1,9 +1,9 @@
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, ArrowRight } from "lucide-react";
 import { Task } from "@/types/task";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TaskCardProps {
   task: Task;
@@ -29,20 +29,20 @@ const statusColors = {
 
 const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false, isDraggable = false }: TaskCardProps) => {
   const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+    e.stopPropagation(); // Prevent drag when clicking edit button
+    e.preventDefault(); // Prevent drag when clicking edit button
     onEdit(task);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+    e.stopPropagation(); // Prevent drag when clicking delete button
+    e.preventDefault(); // Prevent drag when clicking delete button
     onDelete(task.id);
   };
 
   const handleMoveClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+    e.stopPropagation(); // Prevent drag when clicking move button
+    e.preventDefault(); // Prevent drag when clicking move button
     if (onMove) {
       onMove(task);
     }
@@ -52,18 +52,7 @@ const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false, isDr
     <Card className={`mb-4 ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''} hover:shadow-md transition-shadow`}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
-          {/* Tooltip for the title */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <CardTitle className="text-md font-semibold truncate max-w-[180px]" title={task.title}>
-                {task.title}
-              </CardTitle>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {task.title}
-            </TooltipContent>
-          </Tooltip>
-
+          <CardTitle className="text-lg">{task.title}</CardTitle>
           <div className="flex gap-1">
             <Badge variant="outline" className={priorityColors[task.priority as keyof typeof priorityColors] || "bg-gray-100"}>
               {task.priority}
@@ -81,15 +70,33 @@ const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false, isDr
         <p className="text-sm text-gray-700">{task.description}</p>
       </CardContent>
       <CardFooter className="flex justify-end pt-2 gap-2">
-        <Button size="sm" variant="ghost" onClick={handleEditClick} className="z-10" type="button">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={handleEditClick}
+          className="z-10"
+          type="button"
+        >
           <Edit size={16} />
         </Button>
         {showMoveButton && onMove && (
-          <Button size="sm" variant="ghost" onClick={handleMoveClick} className="text-blue-500 hover:text-blue-700 z-10" type="button">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleMoveClick}
+            className="text-blue-500 hover:text-blue-700 z-10"
+            type="button"
+          >
             <ArrowRight size={16} />
           </Button>
         )}
-        <Button size="sm" variant="ghost" onClick={handleDeleteClick} className="text-red-500 hover:text-red-700 z-10" type="button">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={handleDeleteClick}
+          className="text-red-500 hover:text-red-700 z-10"
+          type="button"
+        >
           <Trash2 size={16} />
         </Button>
       </CardFooter>
