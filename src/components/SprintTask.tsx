@@ -68,6 +68,8 @@ const SprintTask = ({ task, sprints, onDelete, onUpdate, onMove, onMoveToBacklog
         return "bg-blue-100 text-blue-800";
       case "in-progress":
         return "bg-purple-100 text-purple-800";
+      case "in-review":
+        return "bg-amber-100 text-amber-800";
       case "done":
         return "bg-green-100 text-green-800";
       default:
@@ -81,6 +83,8 @@ const SprintTask = ({ task, sprints, onDelete, onUpdate, onMove, onMoveToBacklog
         return "To Do";
       case "in-progress":
         return "In Progress";
+      case "in-review":
+        return "In Review";
       case "done":
         return "Done";
       default:
