@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -158,14 +157,16 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task || !user) return;
 
-    const newStatusMap: Record<string, string> = {
+    const newStatusMap: Record<string, Task["status"]> = {
       "column-todo": "todo",
       "column-in-progress": "in-progress",
       "column-in-review": "in-review",
       "column-done": "done",
     };
 
-    const newStatus = newStatusMap[over.id as string];
+    const columnId = over.id as string;
+    const newStatus = newStatusMap[columnId];
+    
     if (!newStatus || newStatus === task.status) return;
 
     console.log(`Moving task ${taskId} from ${task.status} to ${newStatus}`);
@@ -177,7 +178,12 @@ const KanbanBoard = ({ sprintId }: KanbanBoardProps) => {
       );
       
       // Then update the database
-      const updatedTask = { ...task, status: newStatus, user_id: user.id };
+      const updatedTask: Task & { user_id: string } = { 
+        ...task, 
+        status: newStatus, 
+        user_id: user.id 
+      };
+      
       await updateTask(updatedTask);
       
       toast({ 
