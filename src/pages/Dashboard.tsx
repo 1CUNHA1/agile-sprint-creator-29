@@ -8,11 +8,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import { Project } from "@/types/user";
 import LogoutButton from "@/components/LogoutButton";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { createProject } from "@/lib/supabase/projects";
 
 const Dashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [userNames, setUserNames] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [projectName, setProjectName] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -79,6 +85,56 @@ const Dashboard = () => {
     return userNames[userId] || userId.substring(0, 8) + "...";
   };
 
+  const handleCreateProject = async () => {
+    if (!user) return;
+    
+    if (!projectName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Project name cannot be empty',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      // Generate a unique project code
+      const projectCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const ts = new Date().toISOString();
+      
+      const newProject = await createProject({
+        name: projectName.trim(),
+        description: projectDescription.trim(),
+        created_at: ts,
+        user_id: user.id,
+        code: projectCode,
+        members: [user.id],
+      });
+      
+      toast({
+        title: 'Success',
+        description: 'Project created successfully',
+        duration: 3000,
+      });
+      
+      // Add the new project to the list
+      setProjects([...projects, newProject]);
+      
+      // Reset form and close dialog
+      setProjectName("");
+      setProjectDescription("");
+      setIsCreateDialogOpen(false);
+    } catch (error) {
+      console.error('Error creating project:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create project',
+        variant: 'destructive',
+        duration: 5000,
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary to-background">
@@ -106,7 +162,17 @@ const Dashboard = () => {
 
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">All Projects</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">All Projects</h2>
+              <Button 
+                variant="default" 
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="flex items-center"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Project
+              </Button>
+            </div>
             {projects.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
@@ -149,10 +215,59 @@ const Dashboard = () => {
             ) : (
               <div className="text-center py-12 border border-dashed rounded-lg">
                 <p className="text-muted-foreground mb-4">No projects found.</p>
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Project
+                </Button>
               </div>
             )}
           </div>
         </div>
+
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Create New Project</DialogTitle>
+              <DialogDescription>
+                Create a new project and start collaborating with your team.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium">
+                  Project Name
+                </label>
+                <Input
+                  id="name"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="My Amazing Project"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="description" className="text-sm font-medium">
+                  Description (Optional)
+                </label>
+                <Input
+                  id="description"
+                  value={projectDescription}
+                  onChange={(e) => setProjectDescription(e.target.value)}
+                  placeholder="A brief description of your project"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateProject}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Project
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
