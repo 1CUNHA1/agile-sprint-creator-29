@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Home, LayoutDashboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { fetchProjects } from "@/lib/supabase/projects";
-import { fetchSprints } from "@/lib/supabase/sprints";
+import { fetchProjectSprints } from "@/lib/supabase/sprints";
 import CreateSprintDialog from "@/components/CreateSprintDialog";
 import ProductBacklog from "@/components/ProductBacklog";
 import { Project } from "@/types/user";
@@ -35,9 +35,8 @@ const ProjectPage = () => {
         const projectData = projectsData.find(p => p.id === projectId);
         setProject(projectData || null);
         
-        const sprintsData = await fetchSprints(user.id);
-        // Filter sprints that belong to this project
-        const projectSprints = sprintsData.filter(sprint => sprint.projectId === projectId);
+        // Fetch sprints that belong to this project directly
+        const projectSprints = await fetchProjectSprints(projectId);
         setSprints(projectSprints);
       } catch (error) {
         console.error('Error loading project data:', error);
@@ -56,7 +55,6 @@ const ProjectPage = () => {
   
   const handleSprintCreated = (newSprint: Sprint) => {
     setSprints(prevSprints => [...prevSprints, newSprint]);
-    setIsCreateSprintOpen(false);
     toast({
       title: 'Success',
       description: 'Sprint created successfully',
@@ -139,6 +137,7 @@ const ProjectPage = () => {
           open={isCreateSprintOpen} 
           onClose={() => setIsCreateSprintOpen(false)} 
           onCreateSprint={handleSprintCreated}
+          projectId={projectId}
         />
       )}
     </div>
