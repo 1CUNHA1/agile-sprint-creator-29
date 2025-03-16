@@ -4,12 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, ArrowRight } from "lucide-react";
 import { Task } from "@/types/task";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface TaskCardProps {
   task: Task;
@@ -58,16 +52,7 @@ const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false, isDr
     <Card className={`mb-4 ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''} hover:shadow-md transition-shadow`}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <CardTitle className="text-lg truncate max-w-[200px]">{task.title}</CardTitle>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{task.title}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <CardTitle className="text-lg">{task.title}</CardTitle>
           <div className="flex gap-1">
             <Badge variant="outline" className={priorityColors[task.priority as keyof typeof priorityColors] || "bg-gray-100"}>
               {task.priority}
@@ -82,16 +67,7 @@ const TaskCard = ({ task, onEdit, onDelete, onMove, showMoveButton = false, isDr
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-2">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <p className="text-sm text-gray-700 truncate max-w-[250px]">{task.description}</p>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="max-w-xs">{task.description}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <p className="text-sm text-gray-700">{task.description}</p>
       </CardContent>
       <CardFooter className="flex justify-end pt-2 gap-2">
         <Button

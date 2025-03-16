@@ -16,12 +16,6 @@ import { useState } from "react";
 import EditTaskDialog from "./EditTaskDialog";
 import { User } from "@/types/user";
 import { Avatar, AvatarImage, AvatarFallback, AvatarGroup } from "@/components/ui/avatar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 const MOCK_USERS: User[] = [
   { id: "1", name: "John Doe", email: "john.doe@example.com", avatarUrl: "https://github.com/shadcn.png" },
@@ -114,26 +108,8 @@ const SprintTask = ({ task, sprints, onDelete, onUpdate, onMove, onMoveToBacklog
           <div className="flex-1 space-y-2">
             <div className="flex items-start justify-between">
               <div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <h3 className="font-medium text-foreground truncate max-w-[200px]">{task.title}</h3>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{task.title}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <p className="text-sm text-muted-foreground truncate max-w-[200px]">{task.description}</p>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{task.description}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <h3 className="font-medium text-foreground">{task.title}</h3>
+                <p className="text-sm text-muted-foreground">{task.description}</p>
               </div>
               <div className="flex items-center gap-2">
                 {sprints.length > 0 && (
@@ -179,7 +155,7 @@ const SprintTask = ({ task, sprints, onDelete, onUpdate, onMove, onMoveToBacklog
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
               <span
                 className={`px-2 py-1 rounded-md text-xs font-medium ${getPriorityColor(
                   task.priority
